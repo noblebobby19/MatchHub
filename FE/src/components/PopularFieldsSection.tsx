@@ -73,13 +73,6 @@ export function PopularFieldsSection({ onFieldClick, onViewAll }: PopularFieldsS
                     <h3 className="mb-2 group-hover:text-green-600 transition-colors">
                       {field.name}
                     </h3>
-<<<<<<< HEAD
-=======
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      {field.location}
-                    </div>
->>>>>>> c4a500ca96702f3e6a166973dae25cb8bae0fe53
                   </div>
 
                   <div className="flex items-center justify-between">

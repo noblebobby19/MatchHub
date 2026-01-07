@@ -21,14 +21,6 @@ const fieldSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-<<<<<<< HEAD
-=======
-  location: {
-    type: String,
-    required: true,
-    trim: true
-  },
->>>>>>> c4a500ca96702f3e6a166973dae25cb8bae0fe53
   fullAddress: {
     type: String,
     trim: true
