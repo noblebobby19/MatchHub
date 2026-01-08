@@ -143,6 +143,54 @@ class ApiService {
     return this.request('/fields/my');
   }
 
+  async createField(fieldData: any): Promise<any> {
+    return this.request('/fields', {
+      method: 'POST',
+      body: JSON.stringify(fieldData),
+    });
+  }
+
+  async uploadImage(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const token = localStorage.getItem('token');
+    const url = `${this.baseURL}/upload/image`;
+    
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorData;
+      
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json();
+      } else {
+        const text = await response.text();
+        errorData = { message: text || `HTTP ${response.status}: ${response.statusText}` };
+      }
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
+      }
+
+      throw new Error(errorData.message || `Lỗi: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
   // Bookings endpoints
   async createBooking(bookingData: any): Promise<any> {
     return this.request('/bookings', {

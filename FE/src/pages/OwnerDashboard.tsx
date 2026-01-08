@@ -8,7 +8,6 @@ import {
   Plus,
   Search,
   MoreVertical,
-  TrendingUp,
   Users,
   MapPin,
   Edit,
@@ -44,7 +43,8 @@ interface Field {
   size: string;
   status: string;
   available: boolean;
-  location: string;
+  location?: string;
+  fullAddress?: string;
 }
 
 interface Booking {
@@ -79,7 +79,7 @@ export function OwnerDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
+      if (!user || !['owner', 'admin'].includes(user.role)) {
         navigate('/');
         return;
       }
@@ -204,7 +204,7 @@ export function OwnerDashboard() {
   const stats = calculateStats();
   const filteredFields = fields.filter(field => 
     field.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    field.location.toLowerCase().includes(searchQuery.toLowerCase())
+    (field.fullAddress || field.location || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
   const recentBookings = bookings.slice(0, 5);
 
@@ -374,7 +374,10 @@ export function OwnerDashboard() {
                     : 'Quản lý tất cả các sân bóng của bạn'}
                 </p>
               </div>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => navigate('/them-san-moi')}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Thêm sân mới
               </Button>
@@ -443,7 +446,7 @@ export function OwnerDashboard() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
-                          <span className="truncate">{field.location}</span>
+                          <span className="truncate">{field.fullAddress || field.location || 'Chưa có địa chỉ'}</span>
                         </div>
                       </div>
                     </CardContent>

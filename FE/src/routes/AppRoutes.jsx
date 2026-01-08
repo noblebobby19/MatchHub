@@ -10,6 +10,7 @@ import { FindOpponentsPage } from "../pages/FindOpponentsPage";
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
 import { OwnerDashboard } from "../pages/OwnerDashboard";
+import { AddFieldPage } from "../pages/AddFieldPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
 import { BookingSuccessPage } from "../pages/BookingSuccessPage";
 import { ProfilePage } from "../pages/ProfilePage";
@@ -21,6 +22,7 @@ import { AuthProvider } from "../context/AuthContext";
 function Layout({ children }) {
   const location = useLocation();
   const showHeaderFooter = !location.pathname.startsWith('/owner-dashboard') && 
+                          location.pathname !== '/them-san-moi' &&
                           location.pathname !== '/login' && 
                           location.pathname !== '/register' &&
                           location.pathname !== '/thanh-toan';
@@ -50,6 +52,7 @@ export function AppRoutes() {
             <Route path="/dang-ky" element={<RegisterPage />} />
             <Route path="/thanh-toan" element={<CheckoutPage />} />
             <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+            <Route path="/them-san-moi" element={<AddFieldPage />} />
             <Route path="/dat-san-thanh-cong" element={<BookingSuccessPage />} />
             <Route path="/thong-tin-ca-nhan" element={<ProfilePage />} />
             <Route path="/lich-su-dat-san" element={<BookingHistoryPage />} />
