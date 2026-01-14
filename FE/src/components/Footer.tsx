@@ -10,9 +10,9 @@ export function Footer() {
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5"/>
-                  <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="1.5"/>
-                  <circle cx="12" cy="12" r="3" stroke="white" strokeWidth="1.5"/>
+                  <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="1.5" />
+                  <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="1.5" />
+                  <circle cx="12" cy="12" r="3" stroke="white" strokeWidth="1.5" />
                 </svg>
               </div>
               <span className="font-semibold text-xl text-white">MatchHub</span>
@@ -42,7 +42,6 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="hover:text-green-400 transition-colors">Trang chủ</a></li>
               <li><a href="#" className="hover:text-green-400 transition-colors">Tìm sân</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Giá sân</a></li>
               <li><a href="#" className="hover:text-green-400 transition-colors">Về chúng tôi</a></li>
               <li><a href="#" className="hover:text-green-400 transition-colors">Liên hệ</a></li>
             </ul>
@@ -54,9 +53,6 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="hover:text-green-400 transition-colors">Câu hỏi thường gặp</a></li>
               <li><a href="#" className="hover:text-green-400 transition-colors">Hướng dẫn đặt sân</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Chính sách hoàn tiền</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Điều khoản sử dụng</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Chính sách bảo mật</a></li>
             </ul>
           </div>
 
@@ -66,11 +62,11 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span>123 Đường Nguyễn Huệ, Quận 1, TP.HCM</span>
+                <span>600 Nguyễn Văn Cừ Nối Dài, An Bình, Bình Thủy, Cần Thơ, Việt Nam</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-5 w-5 text-green-400 flex-shrink-0" />
-                <span>1900 xxxx</span>
+                <span>0336743580</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-green-400 flex-shrink-0" />
@@ -86,7 +82,6 @@ export function Footer() {
           <div className="flex gap-6">
             <a href="#" className="hover:text-green-400 transition-colors">Điều khoản</a>
             <a href="#" className="hover:text-green-400 transition-colors">Bảo mật</a>
-            <a href="#" className="hover:text-green-400 transition-colors">Cookies</a>
           </div>
         </div>
       </div>

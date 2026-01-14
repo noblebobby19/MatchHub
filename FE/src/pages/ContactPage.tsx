@@ -110,8 +110,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <p className="font-medium mb-1">Điện thoại</p>
-                    <p className="text-sm text-muted-foreground">0939 123 456</p>
-                    <p className="text-sm text-muted-foreground">0938 765 432</p>
+                    <p className="text-sm text-muted-foreground">0336743580</p>
                   </div>
                 </div>
 
@@ -121,7 +120,6 @@ export function ContactPage() {
                   </div>
                   <div>
                     <p className="font-medium mb-1">Email</p>
-                    <p className="text-sm text-muted-foreground">contact@matchhub.vn</p>
                     <p className="text-sm text-muted-foreground">support@matchhub.vn</p>
                   </div>
                 </div>
@@ -133,7 +131,7 @@ export function ContactPage() {
                   <div>
                     <p className="font-medium mb-1">Địa chỉ</p>
                     <p className="text-sm text-muted-foreground">
-                      123 Đường 30/4, Quận Ninh Kiều, Thành phố Cần Thơ
+                      Nguyễn Văn Cừ Nối Dài, An Bình, Bình Thủy, Cần Thơ
                     </p>
                   </div>
                 </div>
@@ -150,34 +148,7 @@ export function ContactPage() {
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="pt-6">
-                <h3 className="mb-2 text-green-900">Hỗ trợ khẩn cấp</h3>
-                <p className="text-sm text-green-800 mb-4">
-                  Nếu bạn cần hỗ trợ khẩn cấp, vui lòng gọi hotline 24/7:
-                </p>
-                <div className="text-2xl text-green-600">
-                  1900 xxxx
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
-
-        {/* Map Section */}
-        <div className="mt-12 max-w-6xl mx-auto">
-          <Card>
-            <CardContent className="p-0">
-              <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <MapPin className="h-12 w-12 mx-auto mb-2" />
-                  <p>Bản đồ vị trí văn phòng</p>
-                  <p className="text-sm">123 Đường 30/4, Quận Ninh Kiều, Cần Thơ</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
