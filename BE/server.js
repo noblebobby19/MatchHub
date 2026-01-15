@@ -8,6 +8,8 @@ import authRoutes from './src/routes/authRoutes.js';
 import fieldRoutes from './src/routes/fieldRoutes.js';
 import bookingRoutes from './src/routes/bookingRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
+import postRoutes from './src/routes/postRoutes.js';
+import notificationRoutes from './src/routes/notificationRoutes.js';
 import passport from './src/config/passport.js';
 
 dotenv.config();
@@ -47,6 +49,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/fields', fieldRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

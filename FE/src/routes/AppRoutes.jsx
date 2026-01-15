@@ -17,6 +17,11 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { BookingHistoryPage } from "../pages/BookingHistoryPage";
 import { BookingDetailPage } from "../pages/BookingDetailPage";
 import { GoogleCallbackPage } from "../pages/GoogleCallbackPage";
+import { CreatePostPage } from "../pages/CreatePostPage";
+import { PostDetailPage } from "../pages/PostDetailPage";
+import { OpponentDetailPage } from "../pages/OpponentDetailPage";
+import { JoinRequestPage } from "../pages/JoinRequestPage";
+import { NotificationsPage } from "../pages/NotificationsPage";
 import { AuthProvider } from "../context/AuthContext";
 
 // Component để kiểm tra xem có nên hiển thị header/footer không
@@ -60,6 +65,11 @@ export function AppRoutes() {
             <Route path="/lich-su-dat-san" element={<BookingHistoryPage />} />
             <Route path="/chi-tiet-don-dat-san/:id" element={<BookingDetailPage />} />
             <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+            <Route path="/tao-bai-dang" element={<CreatePostPage />} />
+            <Route path="/chi-tiet-bai-dang/:id" element={<PostDetailPage />} />
+            <Route path="/chi-tiet-doi-thu/:id" element={<OpponentDetailPage />} />
+            <Route path="/xin-tham-gia/:id" element={<JoinRequestPage />} />
+            <Route path="/thong-bao" element={<NotificationsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

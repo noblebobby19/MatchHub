@@ -235,6 +235,62 @@ class ApiService {
       body: JSON.stringify(profileData),
     });
   }
+
+  // Social / Posts endpoints
+  async getPosts(type?: string): Promise<any[]> {
+    const query = type ? `?type=${type}` : '';
+    return this.request(`/posts${query}`);
+  }
+
+  async getPostById(id: string): Promise<any> {
+    return this.request(`/posts/${id}`);
+  }
+
+  async createPost(postData: any): Promise<any> {
+    return this.request('/posts', {
+      method: 'POST',
+      body: JSON.stringify(postData),
+    });
+  }
+
+  async updatePost(id: string, postData: any): Promise<any> {
+    return this.request(`/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(postData),
+    });
+  }
+
+  async deletePost(id: string): Promise<any> {
+    return this.request(`/posts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Join Requests
+  async createJoinRequest(requestData: any): Promise<any> {
+    return this.request('/posts/request', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  }
+
+  async updateJoinRequestStatus(id: string, status: 'accepted' | 'rejected'): Promise<any> {
+    return this.request(`/posts/request/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Notifications
+  async getNotifications(): Promise<any[]> {
+    return this.request('/notifications');
+  }
+
+  async markNotificationsRead(): Promise<any> {
+    return this.request('/notifications/read-all', {
+      method: 'PUT',
+    });
+  }
 }
 
 export default new ApiService();
