@@ -127,7 +127,7 @@ export function PostDetailPage() {
 
         if (myRequest?.status === 'pending') {
             return (
-                <Button disabled className="w-full bg-yellow-500 text-white py-6 text-lg shadow-none opacity-100 cursor-not-allowed">
+                <Button disabled className="w-full bg-yellow-500 text-blue-600 py-6 text-lg shadow-none opacity-100 cursor-not-allowed">
                     <Clock className="mr-2 h-5 w-5" />
                     Đang chờ duyệt
                 </Button>
