@@ -34,7 +34,9 @@ export function LoginPage() {
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         const userData = JSON.parse(savedUser);
-        if (userData.role === 'owner' || userData.role === 'admin') {
+        if (userData.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else if (userData.role === 'owner') {
           navigate('/owner-dashboard');
         } else {
           navigate('/');
@@ -118,7 +120,12 @@ export function LoginPage() {
                   <input type="checkbox" className="rounded" />
                   Ghi nhớ đăng nhập
                 </label>
-                <Button variant="link" className="text-sm p-0 h-auto">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm p-0 h-auto"
+                  onClick={() => navigate('/quen-mat-khau')}
+                >
                   Quên mật khẩu?
                 </Button>
               </div>

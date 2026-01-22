@@ -9,7 +9,9 @@ import { FindTeammatesPage } from "../pages/FindTeammatesPage";
 import { FindOpponentsPage } from "../pages/FindOpponentsPage";
 import { LoginPage } from "../pages/LoginPage";
 import { RegisterPage } from "../pages/RegisterPage";
+import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { OwnerDashboard } from "../pages/OwnerDashboard";
+import { AdminDashboard } from "../pages/AdminDashboard";
 import { AddFieldPage } from "../pages/AddFieldPage";
 import { CheckoutPage } from "../pages/CheckoutPage";
 import { BookingSuccessPage } from "../pages/BookingSuccessPage";
@@ -56,8 +58,16 @@ export function AppRoutes() {
             <Route path="/tim-doi-thu" element={<FindOpponentsPage />} />
             <Route path="/dang-nhap" element={<LoginPage />} />
             <Route path="/dang-ky" element={<RegisterPage />} />
+            <Route path="/quen-mat-khau" element={<ForgotPasswordPage />} />
             <Route path="/thanh-toan" element={<CheckoutPage />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+            {/* Owner Routes */}
             <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+
+            {/* Owner Routes */}
             <Route path="/them-san-moi" element={<AddFieldPage />} />
             <Route path="/sua-san/:id" element={<AddFieldPage />} />
             <Route path="/dat-san-thanh-cong" element={<BookingSuccessPage />} />

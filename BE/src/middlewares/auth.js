@@ -4,7 +4,7 @@ import User from '../models/User.js';
 export const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       console.log('❌ No authorization header provided');
       return res.status(401).json({ message: 'No token provided' });
@@ -20,7 +20,7 @@ export const authMiddleware = async (req, res, next) => {
     console.log('🔑 Token received:', token.substring(0, 20) + '...');
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this-in-production');
-    
+
     if (!decoded.userId) {
       console.log('❌ Token decoded but no userId found:', decoded);
       return res.status(401).json({ message: 'Invalid token: No user ID found' });
@@ -52,8 +52,8 @@ export const authMiddleware = async (req, res, next) => {
 };
 
 export const ownerMiddleware = (req, res, next) => {
-  if (req.user.role !== 'owner' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied. Owner or Admin only.' });
+  if (req.user.role !== 'owner') {
+    return res.status(403).json({ message: 'Access denied. Owner only.' });
   }
   next();
 };

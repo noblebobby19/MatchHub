@@ -222,9 +222,15 @@ export function Header() {
                   {(user.role === 'owner' || user.role === 'admin') && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => navigate('/owner-dashboard')} className="cursor-pointer hover:bg-green-50 focus:bg-green-50">
-                        Quản lý sân (Admin/Owner)
-                      </DropdownMenuItem>
+                      {user.role === 'admin' ? (
+                        <DropdownMenuItem onClick={() => navigate('/admin-dashboard')} className="cursor-pointer hover:bg-green-50 focus:bg-green-50">
+                          Quản lý người dùng
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => navigate('/owner-dashboard')} className="cursor-pointer hover:bg-green-50 focus:bg-green-50">
+                          Quản lý sân
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
                   <DropdownMenuSeparator />

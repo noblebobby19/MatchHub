@@ -40,6 +40,14 @@ const userSchema = new mongoose.Schema({
   image: {
     type: String,
     default: ''
+  },
+  resetPasswordOtp: {
+    type: String,
+    select: false
+  },
+  resetPasswordExpires: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true

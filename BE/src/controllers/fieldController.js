@@ -48,13 +48,14 @@ export const getMyFields = async (req, res) => {
     let query = {};
 
     // Admin can see all fields
-    if (req.user.role === 'admin') {
-      console.log('✅ Admin user - fetching ALL fields from database');
+    // Owner (Admin) can see all fields
+    if (req.user.role === 'owner') {
+      console.log('✅ Owner (Admin) user - fetching ALL fields from database');
       // No query filter - get all fields
       query = {};
     } else {
-      console.log('✅ Owner user - fetching fields for ownerId:', req.user._id);
-      // Chỉ lấy fields của owner hiện tại
+      // Regular users shouldn't be calling getMyFields typically, but if they do:
+      console.log('⚠️ Regular user calling getMyFields - restricted');
       query.ownerId = req.user._id;
     }
 
@@ -140,8 +141,11 @@ export const updateField = async (req, res) => {
     }
 
     // Check if user is owner or admin
-    if (req.user.role !== 'admin' && field.ownerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check if user is owner (admin) - Allow all owners to edit any field
+    if (req.user.role !== 'owner') {
+      if (field.ownerId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
     }
 
     // Cập nhật field trong database
@@ -167,8 +171,11 @@ export const deleteField = async (req, res) => {
     }
 
     // Check if user is owner or admin
-    if (req.user.role !== 'admin' && field.ownerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
+    // Check if user is owner (admin)
+    if (req.user.role !== 'owner') {
+      if (field.ownerId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
     }
 
     await Field.findByIdAndDelete(req.params.id);

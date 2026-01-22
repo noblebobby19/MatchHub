@@ -1,5 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import sendEmail from '../utils/sendEmail.js';
+import crypto from 'crypto';
 
 export const register = async (req, res) => {
   try {
@@ -145,6 +147,111 @@ export const googleCallback = async (req, res) => {
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/auth/google/callback?token=${token}`);
   } catch (error) {
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/dang-nhap?error=Google auth failed`);
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Email này chưa được đăng ký tài khoản.' });
+    }
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash OTP before saving
+    user.resetPasswordOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    user.resetPasswordExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    await user.save({ validateBeforeSave: false });
+
+    // Send email
+    const message = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #16a34a;">Xin chào,</h2>
+        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản MatchHub.</p>
+        <p>Mã OTP của bạn là:</p>
+        <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+          <h1 style="color: #16a34a; letter-spacing: 5px; margin: 0;">${otp}</h1>
+        </div>
+        <p>Mã có hiệu lực trong 5 phút.</p>
+        <p style="color: #ef4444;">Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+        <p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+        <p style="color: #6b7280; font-size: 14px;">— MatchHub Team</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Mã OTP đặt lại mật khẩu MatchHub',
+        message
+      });
+
+      res.status(200).json({ message: 'Mã OTP đã được gửi đến email.' });
+    } catch (error) {
+      console.error('EMAIL SEND ERROR:', error);
+      user.resetPasswordOtp = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(500).json({ message: 'Không thể gửi email. Vui lòng thử lại sau.' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Hash provided OTP to compare
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    const user = await User.findOne({
+      email,
+      resetPasswordOtp: hashedOtp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+    }
+
+    res.status(200).json({ message: 'OTP hợp lệ.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, password } = req.body;
+
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    const user = await User.findOne({
+      email,
+      resetPasswordOtp: hashedOtp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+    }
+
+    user.password = password;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 

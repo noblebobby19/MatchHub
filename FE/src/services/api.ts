@@ -129,6 +129,27 @@ class ApiService {
     });
   }
 
+  async forgotPassword(email: string): Promise<any> {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyOtp(email: string, otp: string): Promise<any> {
+    return this.request('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async resetPassword(email: string, otp: string, password: string): Promise<any> {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, password }),
+    });
+  }
+
   // Fields endpoints
   async getFields(filters: Record<string, any> = {}): Promise<any[]> {
     const queryParams = new URLSearchParams(filters).toString();
@@ -289,6 +310,17 @@ class ApiService {
   async markNotificationsRead(): Promise<any> {
     return this.request('/notifications/read-all', {
       method: 'PUT',
+    });
+  }
+  // Admin User Management
+  async getUsers(filters: Record<string, any> = {}): Promise<any> {
+    const queryParams = new URLSearchParams(filters).toString();
+    return this.request(`/users?${queryParams}`);
+  }
+
+  async deleteUser(id: string): Promise<any> {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
     });
   }
 }

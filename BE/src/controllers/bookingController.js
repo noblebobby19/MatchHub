@@ -108,17 +108,10 @@ export const getBookings = async (req, res) => {
     // Lấy dữ liệu từ database
     let query = {};
 
-    // Admin can see all bookings
-    if (req.user.role === 'admin') {
-      console.log('✅ Admin user - fetching all bookings');
+    // Owner (acting as Admin) can see all bookings
+    if (req.user.role === 'owner') {
+      console.log('✅ Owner (Admin) user - fetching all bookings');
       // No query filter - get all bookings
-    } else if (req.user.role === 'owner') {
-      console.log('✅ Owner user - fetching bookings for owner fields');
-      // If user is owner, get all bookings for their fields
-      const fields = await Field.find({ ownerId: req.user._id });
-      const fieldIds = fields.map(f => f._id);
-      query.fieldId = { $in: fieldIds };
-      console.log(`✅ Found ${fields.length} fields, ${fieldIds.length} fieldIds`);
     } else {
       console.log('✅ Regular user - fetching own bookings');
       // Regular users only see their own bookings
@@ -152,14 +145,9 @@ export const getBookingById = async (req, res) => {
     }
 
     // Check access - admin can see all, owner can see their field bookings, user can see their own
-    if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+    // Check access - owner (admin) can see all, user can see their own
+    if (req.user.role !== 'owner') {
       if (booking.userId._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
-    } else if (req.user.role === 'owner') {
-      // Owner can only see bookings for their fields
-      const field = await Field.findById(booking.fieldId);
-      if (field && field.ownerId.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
     }
@@ -184,18 +172,11 @@ export const updateBookingStatus = async (req, res) => {
 
     // Lấy field từ database để kiểm tra quyền
     // Admin can update any booking
-    if (req.user.role !== 'admin') {
-      const field = await Field.findById(booking.fieldId);
-      if (req.user.role === 'owner') {
-        // Owner can only update bookings for their fields
-        if (field && field.ownerId.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Access denied' });
-        }
-      } else {
-        // Regular user can only update their own bookings
-        if (booking.userId.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Access denied' });
-        }
+    // Admin/Owner can update any booking
+    if (req.user.role !== 'owner') {
+      // Regular user can only update their own bookings
+      if (booking.userId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Access denied' });
       }
     }
 
@@ -218,19 +199,11 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    // Check access - admin can delete any booking
-    if (req.user.role !== 'admin') {
-      if (req.user.role === 'owner') {
-        // Owner can delete bookings for their fields
-        const field = await Field.findById(booking.fieldId);
-        if (field && field.ownerId.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Access denied' });
-        }
-      } else {
-        // Regular user can only delete their own bookings
-        if (booking.userId.toString() !== req.user._id.toString()) {
-          return res.status(403).json({ message: 'Access denied' });
-        }
+
+    if (req.user.role !== 'owner') {
+      // Regular user can only delete their own bookings
+      if (booking.userId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Access denied' });
       }
     }
 

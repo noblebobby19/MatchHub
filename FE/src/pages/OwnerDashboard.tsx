@@ -319,9 +319,7 @@ export function OwnerDashboard() {
               <CardHeader>
                 <CardTitle>Đặt sân gần đây</CardTitle>
                 <CardDescription>
-                  {user?.role === 'admin'
-                    ? 'Tất cả các đơn đặt sân mới nhất trong hệ thống'
-                    : 'Các đơn đặt sân mới nhất'}
+                  Tất cả các đơn đặt sân mới nhất trong hệ thống
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -399,9 +397,7 @@ export function OwnerDashboard() {
               <div>
                 <h2 className="text-2xl">Quản lý sân</h2>
                 <p className="text-muted-foreground">
-                  {user?.role === 'admin'
-                    ? 'Quản lý tất cả các sân bóng trong hệ thống'
-                    : 'Quản lý tất cả các sân bóng của bạn'}
+                  Quản lý tất cả các sân bóng trong hệ thống
                 </p>
               </div>
               <Button
