@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://matchhub-be.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://matchhub-be.onrender.com/api';
 
 interface RequestOptions {
   method?: string;
