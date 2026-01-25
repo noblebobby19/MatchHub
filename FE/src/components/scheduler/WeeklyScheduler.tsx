@@ -5,6 +5,12 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User } from 'lucid
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
 interface Booking {
     _id: string;
@@ -30,9 +36,10 @@ interface Booking {
 interface WeeklySchedulerProps {
     bookings: Booking[];
     loading?: boolean;
+    onUpdateStatus?: (id: string, status: 'confirmed' | 'cancelled') => void;
 }
 
-export function WeeklyScheduler({ bookings, loading }: WeeklySchedulerProps) {
+export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySchedulerProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // Calculate week range
@@ -118,9 +125,9 @@ export function WeeklyScheduler({ bookings, loading }: WeeklySchedulerProps) {
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <div key={idx} className={`flex flex-col gap-2 ${isToday ? 'bg-blue-50/50 -m-1 p-1 rounded-lg' : ''}`}>
+                        <div key={idx} className={`flex flex-col gap-2 p-2 rounded-lg border ${isToday ? 'bg-blue-100/50 border-blue-200' : 'bg-blue-50/50 border-blue-100'}`}>
                             {/* Day Header */}
-                            <div className={`p-3 rounded-lg border text-center ${isToday ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-white'}`}>
+                            <div className={`p-3 rounded-lg border text-center ${isToday ? 'bg-blue-200 border-blue-300 text-blue-800' : 'bg-blue-100 border-blue-200 text-blue-900'}`}>
                                 <div className="font-semibold">{format(day, 'EEEE', { locale: vi })}</div>
                                 <div className="text-sm opacity-80">{format(day, 'dd/MM')}</div>
                             </div>
@@ -154,6 +161,38 @@ export function WeeklyScheduler({ bookings, loading }: WeeklySchedulerProps) {
                                                     <div className="flex items-center gap-1 text-muted-foreground">
                                                         <span className="font-semibold text-green-600">{booking.amount}</span>
                                                     </div>
+
+                                                    {booking.status === 'pending' && onUpdateStatus && (
+                                                        <div className="mt-2 pt-2 border-t flex justify-end">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="sm" className="h-6 w-full text-[10px] hover:bg-gray-100" onClick={(e) => e.stopPropagation()}>
+                                                                        Thao tác
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem
+                                                                        className="text-green-600 focus:text-green-600 cursor-pointer"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onUpdateStatus(booking._id, 'confirmed');
+                                                                        }}
+                                                                    >
+                                                                        Duyệt
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        className="text-red-600 focus:text-red-600 cursor-pointer"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            onUpdateStatus(booking._id, 'cancelled');
+                                                                        }}
+                                                                    >
+                                                                        Từ chối
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    )}
                                                 </CardContent>
                                             </Card>
                                         ))

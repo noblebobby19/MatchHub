@@ -31,7 +31,7 @@ function Layout({ children }) {
   const location = useLocation();
   const showHeaderFooter = !location.pathname.startsWith('/owner-dashboard') &&
     location.pathname !== '/them-san-moi' &&
-    location.pathname !== '/login' &&
+    location.pathname !== '/dang-nhap' &&
     location.pathname !== '/register' &&
     location.pathname !== '/thanh-toan';
 

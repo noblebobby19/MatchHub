@@ -505,6 +505,20 @@ export function OwnerDashboard() {
           );
         }
 
+        const handleUpdateBookingStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+          try {
+            await apiService.updateBookingStatus(id, status);
+            toast.success(status === 'confirmed' ? 'Đã duyệt đơn đặt sân' : 'Đã từ chối đơn đặt sân');
+
+            // Refresh bookings
+            const updatedBookings = await apiService.getBookings();
+            setBookings(Array.isArray(updatedBookings) ? updatedBookings : []);
+          } catch (error: any) {
+            console.error('Failed to update booking status:', error);
+            toast.error(error.message || 'Cập nhật trạng thái thất bại');
+          }
+        };
+
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -514,7 +528,7 @@ export function OwnerDashboard() {
               </div>
             </div>
 
-            <WeeklyScheduler bookings={bookings} loading={isLoading} />
+            <WeeklyScheduler bookings={bookings} loading={isLoading} onUpdateStatus={handleUpdateBookingStatus} />
           </div>
         );
 

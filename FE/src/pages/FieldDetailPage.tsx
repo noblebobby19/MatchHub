@@ -75,7 +75,7 @@ export function FieldDetailPage() {
         setBookedSlots([]); // Clear old data first
         const formattedDate = format(date, 'yyyy-MM-dd');
         console.log('📅 Checking availability for:', formattedDate);
-        const slots = await apiService.checkAvailability(id, formattedDate);
+        const slots = await apiService.checkAvailability(id, formattedDate, user?.id);
 
         if (isActive) {
           setBookedSlots(slots);

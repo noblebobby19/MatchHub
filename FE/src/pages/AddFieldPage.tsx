@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api';
 import { toast } from 'sonner';
+import { getImageUrl } from '../utils/image';
 
 export function AddFieldPage() {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ export function AddFieldPage() {
             timeSlots: fieldData.timeSlots || []
           });
           if (fieldData.image) {
-            setImagePreview(fieldData.image.startsWith('http') ? fieldData.image : `http://localhost:5000${fieldData.image}`);
+            setImagePreview(getImageUrl(fieldData.image));
           }
         } catch (error) {
           console.error("Failed to fetch field:", error);
@@ -168,6 +169,7 @@ export function AddFieldPage() {
       const response = await apiService.uploadImage(selectedImage);
       setNewField({ ...newField, image: response.imagePath });
       toast.success('Upload ảnh thành công!');
+      setSelectedImage(null); // Hide button after upload
     } catch (error: any) {
       console.error('Failed to upload image:', error);
       toast.error(error.message || 'Upload ảnh thất bại');
@@ -298,7 +300,7 @@ export function AddFieldPage() {
                       />
                     </div>
                   )}
-                  {selectedImage && !newField.image && (
+                  {selectedImage && (
                     <Button
                       type="button"
                       variant="outline"

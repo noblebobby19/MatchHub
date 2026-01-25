@@ -36,15 +36,30 @@ export const createBooking = async (req, res) => {
     console.log('✅ User found:', { id: user._id, name: user.name, email: user.email });
 
     // Check for existing bookings
+    // Chỉ block nếu đã có booking 'confirmed' hoặc 'completed'.
+    // 'pending' bookings không block người khác đặt (tùy logic business, ở đây theo yêu cầu là chờ duyệt thì người khác vẫn đặt được)
     const existingBooking = await Booking.findOne({
       fieldId,
       date,
       time,
-      status: { $in: ['pending', 'confirmed', 'completed'] }
+      status: { $in: ['confirmed', 'completed'] }
+    });
+
+    // Tuy nhiên, nếu user hiện tại đã đặt slot này rồi (đang chờ duyệt) thì báo đã đặt
+    const myPendingBooking = await Booking.findOne({
+      fieldId,
+      date,
+      time,
+      userId: req.user._id,
+      status: 'pending'
     });
 
     if (existingBooking) {
-      return res.status(409).json({ message: 'Khung giờ này đã có người đặt. Vui lòng chọn giờ khác.' });
+      return res.status(409).json({ message: 'Khung giờ này đã được đặt (Đã xác nhận). Vui lòng chọn giờ khác.' });
+    }
+
+    if (myPendingBooking) {
+      return res.status(409).json({ message: 'Bạn đã đặt khung giờ này rồi và đang chờ duyệt.' });
     }
 
     console.log('✅ Slot available, proceeding to create booking...');
@@ -75,19 +90,29 @@ export const createBooking = async (req, res) => {
 
 export const checkAvailability = async (req, res) => {
   try {
-    const { fieldId, date } = req.query;
+    const { fieldId, date, userId } = req.query;
 
     if (!fieldId || !date) {
       return res.status(400).json({ message: 'Missing fieldId or date' });
     }
 
-    console.log(`🔍 Checking availability for Field: ${fieldId}, Date: ${date}`);
+    console.log(`🔍 Checking availability for Field: ${fieldId}, Date: ${date}, User: ${userId || 'Guest'}`);
 
-    const bookings = await Booking.find({
+    // Logic:
+    // 1. Lấy tất cả booking confirmed/completed (để hiện là đã đặt cho tất cả mọi người)
+    // 2. Lấy booking pending CỦA USER ĐÓ (để hiện là đã đặt/chờ duyệt cho chính họ)
+    // 3. Booking pending của người khác KHÔNG lấy (với họ thì slot đó vẫn trống)
+
+    const query = {
       fieldId,
       date,
-      status: { $in: ['pending', 'confirmed', 'completed'] }
-    }).select('time timeSlot status');
+      $or: [
+        { status: { $in: ['confirmed', 'completed'] } }, // Confirmed bookings are always blocked
+        ...(userId ? [{ status: 'pending', userId }] : []) // Own pending bookings are shown
+      ]
+    };
+
+    const bookings = await Booking.find(query).select('time timeSlot status');
 
     // Return list of booked times
     const bookedSlots = bookings.map(b => ({
@@ -159,6 +184,8 @@ export const getBookingById = async (req, res) => {
   }
 };
 
+import Notification from '../models/Notification.js';
+
 export const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -171,7 +198,6 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     // Lấy field từ database để kiểm tra quyền
-    // Admin can update any booking
     // Admin/Owner can update any booking
     if (req.user.role !== 'owner') {
       // Regular user can only update their own bookings
@@ -180,9 +206,50 @@ export const updateBookingStatus = async (req, res) => {
       }
     }
 
+    // Nếu duyệt đơn (confirmed), kiểm tra xem khung giờ này đã có đơn nào được duyệt chưa
+    if (status === 'confirmed') {
+      const conflictingBooking = await Booking.findOne({
+        _id: { $ne: booking._id }, // Không tính chính nó
+        fieldId: booking.fieldId,
+        date: booking.date,
+        time: booking.time,
+        status: 'confirmed'
+      });
+
+      if (conflictingBooking) {
+        return res.status(409).json({
+          message: 'Khung giờ này đã được duyệt cho một đội khác. Vui lòng từ chối đơn này hoặc hủy đơn đã duyệt trước đó.'
+        });
+      }
+    }
+
     // Cập nhật status và lưu vào database
     booking.status = status;
     await booking.save();
+
+    // Create notification for the user
+    try {
+      const statusText = status === 'confirmed' ? 'Duyệt' : status === 'cancelled' || status === 'rejected' ? 'Từ chối' : status;
+      let message = `Đơn đặt sân ${booking.fieldName} của bạn (ngày ${booking.date} lúc ${booking.time}) đã được ${statusText}`;
+
+      if (status === 'confirmed') {
+        message = `✅ Đơn đặt sân ${booking.fieldName} của bạn đã được Xác nhận!\nNgày: ${booking.date}\nGiờ: ${booking.time}`;
+      } else if (status === 'cancelled' || status === 'rejected') {
+        message = `❌ Đơn đặt sân ${booking.fieldName} của bạn đã bị Từ chối/Hủy.\nNgày: ${booking.date}\nGiờ: ${booking.time}`;
+      }
+
+      await Notification.create({
+        user: booking.userId,
+        title: 'Cập nhật trạng thái đặt sân',
+        message: message,
+        type: status === 'confirmed' ? 'success' : 'error',
+        link: `/chi-tiet-don-dat-san/${booking._id}`
+      });
+      console.log('🔔 Notification created for user:', booking.userId);
+    } catch (notifError) {
+      console.error('❌ Error creating notification:', notifError);
+      // Don't fail the request if notification fails
+    }
 
     // Trả về booking đã được cập nhật từ database
     res.json(booking);

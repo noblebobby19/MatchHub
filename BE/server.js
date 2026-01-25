@@ -11,6 +11,7 @@ import uploadRoutes from './src/routes/uploadRoutes.js';
 import postRoutes from './src/routes/postRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
+import contactRoutes from './src/routes/contactRoutes.js';
 import passport from './src/config/passport.js';
 
 dotenv.config();
@@ -53,6 +54,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/contacts', contactRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

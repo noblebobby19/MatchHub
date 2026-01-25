@@ -76,16 +76,16 @@ export function BookingHistoryPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'destructive' | 'secondary' | 'outline' }> = {
-      pending: { label: 'Chờ xác nhận', variant: 'default' },
-      confirmed: { label: 'Đã xác nhận', variant: 'default' },
-      completed: { label: 'Hoàn thành', variant: 'default' },
-      cancelled: { label: 'Đã hủy', variant: 'destructive' }
+    const statusMap: Record<string, { label: string; className: string }> = {
+      pending: { label: 'Chờ xác nhận', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' },
+      confirmed: { label: 'Đã xác nhận', className: 'bg-green-100 text-green-800 hover:bg-green-200' },
+      completed: { label: 'Hoàn thành', className: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
+      cancelled: { label: 'Đã hủy', className: 'bg-red-100 text-red-800 hover:bg-red-200' }
     };
 
-    const statusInfo = statusMap[status] || { label: status || 'N/A', variant: 'default' as const };
+    const statusInfo = statusMap[status] || { label: status || 'N/A', className: 'bg-gray-100 text-gray-800' };
     return (
-      <Badge variant={statusInfo.variant} className="capitalize">
+      <Badge variant="outline" className={`capitalize border-0 ${statusInfo.className}`}>
         {statusInfo.label}
       </Badge>
     );
@@ -154,10 +154,6 @@ export function BookingHistoryPage() {
                           </div>
 
                           <div className="space-y-2 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-green-600" />
-                              <span>{booking.fieldId?.location || 'N/A'}</span>
-                            </div>
 
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-green-600" />

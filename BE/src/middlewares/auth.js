@@ -51,6 +51,7 @@ export const authMiddleware = async (req, res, next) => {
   }
 };
 
+
 export const ownerMiddleware = (req, res, next) => {
   if (req.user.role !== 'owner') {
     return res.status(403).json({ message: 'Access denied. Owner only.' });
@@ -58,4 +59,10 @@ export const ownerMiddleware = (req, res, next) => {
   next();
 };
 
-
+export const adminMiddleware = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Admin only.' });
+  }
+};

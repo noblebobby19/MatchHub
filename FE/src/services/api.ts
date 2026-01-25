@@ -241,8 +241,16 @@ class ApiService {
     return this.request(`/bookings/${id}`);
   }
 
-  async checkAvailability(fieldId: string, date: string): Promise<any[]> {
-    return this.request(`/bookings/availability?fieldId=${fieldId}&date=${date}`);
+  async updateBookingStatus(id: string, status: 'confirmed' | 'cancelled' | 'rejected'): Promise<any> {
+    return this.request(`/bookings/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async checkAvailability(fieldId: string, date: string, userId?: string): Promise<any[]> {
+    const query = `fieldId=${fieldId}&date=${date}${userId ? `&userId=${userId}` : ''}`;
+    return this.request(`/bookings/availability?${query}`);
   }
 
   // Profile endpoints
@@ -318,8 +326,34 @@ class ApiService {
     return this.request(`/users?${queryParams}`);
   }
 
+
   async deleteUser(id: string): Promise<any> {
     return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Contact endpoints
+  async sendContact(data: { subject: string; content: string }): Promise<any> {
+    return this.request('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getContacts(): Promise<any[]> {
+    return this.request('/contacts');
+  }
+
+  async replyContact(id: string, replyMessage: string): Promise<any> {
+    return this.request(`/contacts/${id}/reply`, {
+      method: 'PUT',
+      body: JSON.stringify({ replyMessage }),
+    });
+  }
+
+  async deleteContact(id: string): Promise<any> {
+    return this.request(`/contacts/${id}`, {
       method: 'DELETE',
     });
   }

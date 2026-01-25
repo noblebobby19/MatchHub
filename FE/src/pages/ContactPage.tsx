@@ -1,16 +1,52 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Label } from "../components/ui/label";
+import { useAuth } from "../context/AuthContext";
+import ApiService from "../services/api";
 
 export function ContactPage() {
-  const handleSubmit = (e: React.FormEvent) => {
+  const { user } = useAuth(); // Get user from Auth Context
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    subject: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Check auth on mount
+  useEffect(() => {
+    if (!user) {
+      // If not logged in, redirect to login or show message
+      navigate('/dang-nhap?redirect=/lien-he');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    alert("Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong thời gian sớm nhất.");
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      await ApiService.sendContact({
+        subject: formData.subject,
+        content: formData.message
+      });
+      setShowSuccess(true);
+      setFormData({ subject: '', message: '' });
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi gửi tin nhắn');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (!user) return null; // Or a loading spinner while redirecting
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,64 +71,73 @@ export function ContactPage() {
                 <CardTitle>Gửi tin nhắn cho chúng tôi</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid sm:grid-cols-2 gap-4">
+                {showSuccess ? (
+                  <div className="text-center py-8 space-y-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                      <Send className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-green-800">Gửi liên hệ thành công!</h3>
+                    <p className="text-gray-600 max-w-md mx-auto">
+                      Chúng tôi đã nhận được tin nhắn của bạn và sẽ phản hồi trong vòng 24 giờ.
+                      Vui lòng kiểm tra email hoặc thông báo để nhận câu trả lời.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSuccess(false)}
+                      className="mt-4"
+                    >
+                      Gửi tin nhắn khác
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Họ và tên *</Label>
+                      {/* Auto populated user info display (optional per req, but good for UX) */}
+                      <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 mb-4">
+                        Bạn đang gửi tin nhắn với tư cách: <span className="font-bold text-gray-900">{user.name}</span> ({user.email})
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Chủ đề</Label>
                       <Input
-                        id="name"
-                        placeholder="Nguyễn Văn A"
+                        id="subject"
+                        placeholder="Tiêu đề tin nhắn"
+                        value={formData.subject}
+                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                         required
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Số điện thoại *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="0939 xxx xxx"
+                      <Label htmlFor="message">Nội dung *</Label>
+                      <Textarea
+                        id="message"
+                        placeholder="Nhập nội dung tin nhắn của bạn..."
+                        rows={6}
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         required
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@example.com"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Chủ đề</Label>
-                    <Input
-                      id="subject"
-                      placeholder="Tiêu đề tin nhắn"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Nội dung *</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Nhập nội dung tin nhắn của bạn..."
-                      rows={6}
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    size="lg"
-                  >
-                    <Send className="h-5 w-5 mr-2" />
-                    Gửi tin nhắn
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      size="lg"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">Đang gửi...</span>
+                      ) : (
+                        <>
+                          <Send className="h-5 w-5 mr-2" />
+                          Gửi tin nhắn
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </div>
