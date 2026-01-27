@@ -18,7 +18,20 @@ router.post('/reset-password', resetPassword);
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get(
     '/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+    (req, res, next) => {
+        passport.authenticate('google', { session: false }, (err, user, info) => {
+            if (err) {
+                const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+                return res.redirect(`${clientUrl}/dang-nhap?error=${encodeURIComponent(err.message)}`);
+            }
+            if (!user) {
+                const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+                return res.redirect(`${clientUrl}/dang-nhap?error=Authentication failed`);
+            }
+            req.user = user;
+            next();
+        })(req, res, next);
+    },
     googleCallback
 );
 
