@@ -143,10 +143,14 @@ export const googleCallback = async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Sanitize CLIENT_URL
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+
     // Redirect to frontend with token
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/auth/google/callback?token=${token}`);
+    res.redirect(`${clientUrl}/auth/google/callback?token=${token}`);
   } catch (error) {
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/dang-nhap?error=Google auth failed`);
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+    res.redirect(`${clientUrl}/dang-nhap?error=Google auth failed`);
   }
 };
 
