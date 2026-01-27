@@ -20,12 +20,14 @@ router.get(
     '/google/callback',
     (req, res, next) => {
         passport.authenticate('google', { session: false }, (err, user, info) => {
+            // Determine client URL based on environment or referrer
+            // Prioritize CLIENT_URL env, then fallback to localhost:3000
+            const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
+
             if (err) {
-                const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
                 return res.redirect(`${clientUrl}/dang-nhap?error=${encodeURIComponent(err.message)}`);
             }
             if (!user) {
-                const clientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
                 return res.redirect(`${clientUrl}/dang-nhap?error=Authentication failed`);
             }
             req.user = user;

@@ -26,8 +26,10 @@ const PORT = process.env.PORT || 8000;
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174', // Vite default alternative
   'http://localhost:3000',
-  'https://match-hub-opal.vercel.app'
+  'https://match-hub-opal.vercel.app',
+  'https://matchhub-be.onrender.com' // Allow backend to call itself if needed
 ];
 
 app.use(cors({
@@ -51,7 +53,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 // Serve static files (ảnh)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', (req, res, next) => {
+  // console.log(`📂 Static file requested: ${req.path}`);
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 connectDB();
