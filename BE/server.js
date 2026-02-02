@@ -28,8 +28,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174', // Vite default alternative
   'http://localhost:3000',
-  'https://match-hub-opal.vercel.app',
-  'https://matchhub-be.onrender.com' // Allow backend to call itself if needed
+  'https://match-hub-opal.vercel.app'
 ];
 
 app.use(cors({
@@ -47,6 +46,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
