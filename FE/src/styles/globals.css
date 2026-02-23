@@ -19,8 +19,9 @@
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
-  --input: transparent;
-  --input-background: #f3f3f5;
+  --input: rgba(0, 0, 0, 0.1);
+  --input-background: #ffffff;
+  --input-foreground: #111111;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -186,4 +187,28 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* ===== Fix màu chữ Input & Select toàn cục ===== */
+/* Đảm bảo chữ nhập vào và placeholder luôn nổi bật, 
+   không bị ảnh hưởng bởi color kế thừa từ parent (vd: text-white trên bg xanh) */
+
+[data-slot="input"] {
+  color: #111111 !important;
+  background-color: #ffffff !important;
+}
+
+[data-slot="input"]::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+[data-slot="select-trigger"] {
+  color: #111111 !important;
+  background-color: #ffffff !important;
+}
+
+[data-slot="select-trigger"][data-placeholder]>[data-slot="select-value"],
+[data-slot="select-trigger"] [data-placeholder] {
+  color: #9ca3af !important;
 }

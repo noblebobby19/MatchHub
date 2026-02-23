@@ -167,7 +167,9 @@ export function AddFieldPage() {
     setIsUploadingImage(true);
     try {
       const response = await apiService.uploadImage(selectedImage);
-      setNewField({ ...newField, image: response.imagePath });
+      setNewField(prev => ({ ...prev, image: response.imagePath }));
+      // Cập nhật imagePreview thành URL thực từ server
+      setImagePreview(getImageUrl(response.imagePath));
       toast.success('Upload ảnh thành công!');
       setSelectedImage(null); // Hide button after upload
     } catch (error: any) {
@@ -291,12 +293,21 @@ export function AddFieldPage() {
                     onChange={handleImageChange}
                     className="cursor-pointer"
                   />
-                  {imagePreview && (
+                  {(imagePreview || newField.image) && (
                     <div className="mt-2">
                       <img
-                        src={imagePreview}
+                        src={imagePreview || getImageUrl(newField.image)}
                         alt="Preview"
                         className="w-full h-48 object-cover rounded-lg border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          // Thử lại với URL fallback nếu URL chính bị lỗi
+                          if (newField.image && target.src !== getImageUrl(newField.image)) {
+                            target.src = getImageUrl(newField.image);
+                          } else {
+                            target.style.display = 'none';
+                          }
+                        }}
                       />
                     </div>
                   )}
