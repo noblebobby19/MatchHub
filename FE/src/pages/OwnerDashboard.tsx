@@ -14,7 +14,8 @@ import {
   Trash2,
   Loader2,
   Ban,
-  CheckCircle
+  CheckCircle,
+  Home
 } from 'lucide-react';
 import { WeeklyScheduler } from '../components/scheduler/WeeklyScheduler';
 import { Button } from '../components/ui/button';
@@ -657,6 +658,10 @@ export function OwnerDashboard() {
 
           <div className="ml-auto flex items-center gap-4">
             <span className="text-sm text-muted-foreground">Xin chào, {user?.name}</span>
+            <Button variant="outline" onClick={() => navigate('/')}>
+              <Home className="h-4 w-4 mr-2" />
+              Về trang chủ
+            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Đăng xuất
