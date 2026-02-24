@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Ban, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -95,6 +95,15 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
         }
     };
 
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg border shadow-sm">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600 mb-4" />
+                <p className="text-sm text-muted-foreground font-medium">Đang tải lịch đặt sân...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             {/* Header Controls */}
@@ -117,88 +126,103 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
                 </Button>
             </div>
 
-            {/* Week Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            {/* Week List - Vertical Layout */}
+            <div className="flex flex-col gap-6">
                 {weekDays.map((day, idx) => {
                     const dateStr = format(day, 'yyyy-MM-dd');
                     const dayBookings = bookingsByDate[dateStr] || [];
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <div key={idx} className={`flex flex-col gap-2 p-2 rounded-lg border ${isToday ? 'bg-blue-100/50 border-blue-200' : 'bg-blue-50/50 border-blue-100'}`}>
-                            {/* Day Header */}
-                            <div className={`p-3 rounded-lg border text-center ${isToday ? 'bg-blue-200 border-blue-300 text-blue-800' : 'bg-blue-100 border-blue-200 text-blue-900'}`}>
-                                <div className="font-semibold">{format(day, 'EEEE', { locale: vi })}</div>
-                                <div className="text-sm opacity-80">{format(day, 'dd/MM')}</div>
+                        <div key={idx} className={`flex flex-col rounded-xl border shadow-sm overflow-hidden ${isToday ? 'border-green-200 ring-1 ring-green-100' : 'border-gray-200'}`}>
+                            {/* Day Header - Banner Style */}
+                            <div className={`px-4 py-3 flex items-center justify-between ${isToday ? 'bg-green-600 text-white' : 'bg-gray-50 border-b'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`text-lg font-bold ${isToday ? 'text-white' : 'text-gray-900'}`}>
+                                        {format(day, 'EEEE', { locale: vi })}
+                                    </div>
+                                    <div className={`text-sm px-2 py-0.5 rounded-full ${isToday ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                        {format(day, 'dd/MM/yyyy')}
+                                    </div>
+                                    {isToday && (
+                                        <Badge className="bg-white text-green-700 hover:bg-white/90 border-none text-[10px] h-5">HÔM NAY</Badge>
+                                    )}
+                                </div>
+                                <div className="text-xs opacity-80">
+                                    {dayBookings.length} đơn đặt sân
+                                </div>
                             </div>
 
-                            {/* Bookings List */}
-                            <div className="space-y-2">
+                            {/* Bookings List Area */}
+                            <div className="p-4 bg-white min-h-[60px]">
                                 {dayBookings.length > 0 ? (
-                                    dayBookings
-                                        .sort((a, b) => a.time.localeCompare(b.time))
-                                        .map((booking) => (
-                                            <Card key={booking._id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer border-l-4" style={{ borderLeftColor: booking.status === 'confirmed' ? '#22c55e' : booking.status === 'pending' ? '#eab308' : '#94a3b8' }}>
-                                                <CardContent className="p-2 space-y-1.5 text-xs">
-                                                    <div className="flex items-center justify-between">
-                                                        <Badge variant="secondary" className="px-1 py-0 h-5 font-normal text-[10px] bg-slate-100">
-                                                            {booking.time}
-                                                        </Badge>
-                                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getStatusColor(booking.status)}`}>
-                                                            {getStatusLabel(booking.status)}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="font-medium truncate" title={booking.fieldName}>
-                                                        {booking.fieldName}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1 text-muted-foreground truncate">
-                                                        <User className="h-3 w-3" />
-                                                        <span>{booking.customer}</span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                                        <span className="font-semibold text-green-600">{booking.amount}</span>
-                                                    </div>
-
-                                                    {booking.status === 'pending' && onUpdateStatus && (
-                                                        <div className="mt-2 pt-2 border-t flex justify-end">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="sm" className="h-6 w-full text-[10px] hover:bg-gray-100" onClick={(e) => e.stopPropagation()}>
-                                                                        Thao tác
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem
-                                                                        className="text-green-600 focus:text-green-600 cursor-pointer"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            onUpdateStatus(booking._id, 'confirmed');
-                                                                        }}
-                                                                    >
-                                                                        Duyệt
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        className="text-red-600 focus:text-red-600 cursor-pointer"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            onUpdateStatus(booking._id, 'cancelled');
-                                                                        }}
-                                                                    >
-                                                                        Từ chối
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {dayBookings
+                                            .sort((a, b) => a.time.localeCompare(b.time))
+                                            .map((booking) => (
+                                                <Card key={booking._id} className="relative overflow-hidden hover:shadow-md transition-all border-l-4 group" style={{ borderLeftColor: booking.status === 'confirmed' ? '#22c55e' : booking.status === 'pending' ? '#eab308' : '#ef4444' }}>
+                                                    <CardContent className="p-4">
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                                                                    <CalendarIcon className="h-3.5 w-3.5 text-green-600" />
+                                                                    {booking.time}
+                                                                </span>
+                                                                <span className="text-xs text-muted-foreground font-medium mt-0.5">
+                                                                    {booking.fieldName}
+                                                                </span>
+                                                            </div>
+                                                            <Badge className={`text-[10px] uppercase font-bold tracking-wider rounded-md py-0.5 ${getStatusColor(booking.status)}`}>
+                                                                {getStatusLabel(booking.status)}
+                                                            </Badge>
                                                         </div>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-                                        ))
+
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                                {booking.customer.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs font-semibold truncate text-gray-800">{booking.customer}</p>
+                                                                <p className="text-[10px] text-muted-foreground truncate">{booking.userId?.phone || 'Chưa có SĐT'}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between pt-3 border-t">
+                                                            <span className="text-sm font-bold text-green-700">{booking.amount}</span>
+
+                                                            {booking.status === 'pending' && onUpdateStatus && (
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1.5 hover:bg-green-50 hover:text-green-700 border-gray-200">
+                                                                            Thao tác
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end" className="w-40">
+                                                                        <DropdownMenuItem
+                                                                            className="text-green-600 focus:text-green-600 cursor-pointer flex items-center gap-2 font-medium"
+                                                                            onClick={() => onUpdateStatus(booking._id, 'confirmed')}
+                                                                        >
+                                                                            <CheckCircle2 className="h-4 w-4" />
+                                                                            Xác nhận
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            className="text-red-600 focus:text-red-600 cursor-pointer flex items-center gap-2 font-medium"
+                                                                            onClick={() => onUpdateStatus(booking._id, 'cancelled')}
+                                                                        >
+                                                                            <Ban className="h-4 w-4" />
+                                                                            Từ chối
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            )}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                    </div>
                                 ) : (
-                                    <div className="h-20 flex items-center justify-center text-muted-foreground text-xs border rounded-lg border-dashed bg-gray-50/50">
-                                        Trống
+                                    <div className="flex items-center justify-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-100 rounded-lg">
+                                        Không có lịch đặt sân cho ngày này
                                     </div>
                                 )}
                             </div>
