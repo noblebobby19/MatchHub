@@ -2,6 +2,27 @@ import JoinRequest from '../models/JoinRequest.js';
 import Post from '../models/Post.js';
 import Notification from '../models/Notification.js';
 
+// Lấy danh sách đội đã tham gia (accepted) của user hiện tại
+export const getJoinedTeams = async (req, res) => {
+    try {
+        const requests = await JoinRequest.find({
+            user: req.user._id,
+            status: 'accepted'
+        })
+            .populate({
+                path: 'post',
+                populate: { path: 'user', select: 'name avatar phone' }
+            })
+            .sort({ updatedAt: -1 });
+
+        // Lọc bỏ các request mà post đã bị xóa
+        const validRequests = requests.filter(r => r.post !== null);
+        res.json(validRequests);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // Create Join Request
 export const createRequest = async (req, res) => {
     try {
@@ -91,12 +112,12 @@ export const updateRequestStatus = async (req, res) => {
         const request = await JoinRequest.findById(req.params.id).populate('post');
 
         if (!request) {
-            return res.status(404).json({ message: 'Request not found' });
+            return res.status(404).json({ message: 'Không tìm thấy yêu cầu.' });
         }
 
         // Prevent double actions
         if (request.status !== 'pending') {
-            return res.status(400).json({ message: 'Request already processed' });
+            return res.status(400).json({ message: 'Yêu cầu này đã được xử lý trước đó.' });
         }
 
         // Update status
@@ -167,7 +188,7 @@ export const getNotifications = async (req, res) => {
 export const markRead = async (req, res) => {
     try {
         await Notification.updateMany({ user: req.user._id, isRead: false }, { isRead: true });
-        res.json({ message: 'Marked all as read' });
+        res.json({ message: 'Đã đánh dấu tất cả thông báo là đã đọc.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

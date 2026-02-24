@@ -253,6 +253,38 @@ class ApiService {
     return this.request(`/bookings/availability?${query}`);
   }
 
+  // ── Banking Payment ─────────────────────────────────────────────
+  async createBankingBooking(bookingData: any): Promise<any> {
+    return this.request('/bookings/banking', {
+      method: 'POST',
+      body: JSON.stringify(bookingData),
+    });
+  }
+
+  async confirmPayment(id: string): Promise<any> {
+    return this.request(`/bookings/${id}/confirm`, { method: 'PUT' });
+  }
+
+  async cancelBooking(id: string): Promise<any> {
+    return this.request(`/bookings/${id}/cancel`, { method: 'PUT' });
+  }
+
+  async markRefunded(id: string): Promise<any> {
+    return this.request(`/bookings/${id}/refunded`, { method: 'PUT' });
+  }
+
+  async getBankConfig(): Promise<any> {
+    return this.request('/bank-config');
+  }
+
+  async updateBankConfig(data: { bankCode?: string; accountNumber?: string; accountName?: string; depositPercent?: number }): Promise<any> {
+    return this.request('/bank-config', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+  // ────────────────────────────────────────────────────────────────
+
   // Profile endpoints
   async getProfile(): Promise<any> {
     return this.request('/auth/profile');
@@ -269,6 +301,17 @@ class ApiService {
   async getPosts(type?: string): Promise<any[]> {
     const query = type ? `?type=${type}` : '';
     return this.request(`/posts${query}`);
+  }
+
+  // Lấy tất cả bài của user hiện tại (kể cả closed) - dành cho lịch sử
+  async getMyPosts(type?: string): Promise<any[]> {
+    const query = type ? `?type=${type}` : '';
+    return this.request(`/posts/my${query}`);
+  }
+
+  // Lấy danh sách đội đã tham gia (accepted join requests)
+  async getJoinedTeams(): Promise<any[]> {
+    return this.request('/posts/request/joined');
   }
 
   async getPostById(id: string): Promise<any> {

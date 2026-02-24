@@ -33,7 +33,10 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+    enum: [
+      'pending', 'confirmed', 'cancelled', 'completed', // ← giữ nguyên cho tiền mặt
+      'PENDING', 'CONFIRMED', 'EXPIRED', 'CANCELLED', 'REFUND_PENDING', 'REFUNDED' // ← mới cho banking
+    ],
     default: 'pending'
   },
   amount: {
@@ -43,7 +46,28 @@ const bookingSchema = new mongoose.Schema({
   amountValue: {
     type: Number,
     default: 0
+  },
+
+  // ── BANKING PAYMENT FIELDS ──────────────────────────────────────
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'banking'],
+    default: 'cash'
+  },
+  bookingCode: {
+    type: String,
+    unique: true,
+    sparse: true // null được phép (booking tiền mặt không có code)
+  },
+  depositAmount: {
+    type: Number,
+    default: 0  // số tiền cọc (VD: 30% của amountValue)
+  },
+  expireAt: {
+    type: Date,
+    default: null // chỉ set khi paymentMethod = 'banking'
   }
+  // ───────────────────────────────────────────────────────────────
 }, {
   timestamps: true
 });
@@ -51,5 +75,3 @@ const bookingSchema = new mongoose.Schema({
 const Booking = mongoose.model('Booking', bookingSchema);
 
 export default Booking;
-
-

@@ -10,7 +10,7 @@ export const register = async (req, res) => {
     // Kiểm tra user đã tồn tại trong database chưa
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'Email này đã được đăng ký tài khoản.' });
     }
 
     // Tạo user mới và lưu vào database
@@ -31,7 +31,7 @@ export const register = async (req, res) => {
 
     // Trả về thông tin user đã được lưu vào database
     res.status(201).json({
-      message: 'User created successfully',
+      message: 'Đăng ký tài khoản thành công.',
       token,
       user: {
         id: user._id,
@@ -55,7 +55,7 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       console.log('User not found:', email);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Email hoặc mật khẩu không chính xác.' });
     }
 
     console.log('User found:', user.email);
@@ -64,14 +64,14 @@ export const login = async (req, res) => {
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       console.log('Invalid password for user:', email);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Email hoặc mật khẩu không chính xác.' });
     }
 
     console.log('Password valid for user:', email);
 
     // Check role if provided
     if (role && user.role !== role) {
-      return res.status(403).json({ message: 'Invalid role' });
+      return res.status(403).json({ message: 'Bạn không có quyền truy cập với vai trò này.' });
     }
 
     // Generate token
@@ -83,7 +83,7 @@ export const login = async (req, res) => {
 
     // Trả về thông tin user từ database
     res.json({
-      message: 'Login successful',
+      message: 'Đăng nhập thành công.',
       token,
       user: {
         id: user._id,
@@ -125,7 +125,7 @@ export const updateProfile = async (req, res) => {
     ).select('-password');
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
     }
 
     res.json(user);

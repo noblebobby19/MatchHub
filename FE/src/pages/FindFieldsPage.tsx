@@ -27,7 +27,7 @@ export function FindFieldsPage() {
         if (selectedSize !== "all") filters.size = selectedSize;
         if (selectedType !== "all") filters.type = selectedType;
         if (searchQuery) filters.search = searchQuery;
-        
+
         const data = await apiService.getFields(filters);
         setFields(data);
         setError(null);
@@ -43,9 +43,9 @@ export function FindFieldsPage() {
   }, [searchQuery, selectedSize, selectedType]);
 
   const filteredFields = fields.filter(field => {
-    const matchesSearch = !searchQuery || 
-                         field.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         field.location?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery ||
+      field.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      field.location?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSize = selectedSize === "all" || field.size === selectedSize;
     const matchesType = selectedType === "all" || field.type === selectedType;
     return matchesSearch && matchesSize && matchesType;
@@ -59,7 +59,7 @@ export function FindFieldsPage() {
           <h1 className="text-3xl sm:text-4xl mb-6 text-center">
             Tìm sân bóng phù hợp
           </h1>
-          
+
           {/* Search Bar */}
           <div className="max-w-4xl mx-auto bg-white rounded-lg p-4 shadow-lg">
             <div className="grid md:grid-cols-4 gap-4">
@@ -74,7 +74,7 @@ export function FindFieldsPage() {
                   />
                 </div>
               </div>
-              
+
               <Select value={selectedSize} onValueChange={setSelectedSize}>
                 <SelectTrigger>
                   <Users className="h-4 w-4 mr-2" />
@@ -159,11 +159,6 @@ export function FindFieldsPage() {
                       </h3>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span>{field.rating || 0}</span>
-                        <span className="text-sm text-muted-foreground">({field.reviews || 0})</span>
-                      </div>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Users className="h-4 w-4" />
                         {field.size}
@@ -175,7 +170,7 @@ export function FindFieldsPage() {
                         <div className="text-sm text-muted-foreground">Giá từ</div>
                         <div className="text-green-600">{field.price}/giờ</div>
                       </div>
-                      <Button 
+                      <Button
                         className="bg-green-600 hover:bg-green-700"
                         disabled={!field.available}
                       >

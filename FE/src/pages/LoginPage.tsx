@@ -1,18 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, Eye, EyeOff, XCircle, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
@@ -22,11 +14,13 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setShowErrorAlert(false);
 
     try {
       await login(email, password);
@@ -46,16 +40,11 @@ export function LoginPage() {
       }
     } catch (error: any) {
       console.error('Login failed:', error);
-      setShowErrorModal(true);
+      setErrorMessage(error.message || 'Tài khoản hoặc mật khẩu không đúng.');
+      setShowErrorAlert(true);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCloseErrorModal = () => {
-    setShowErrorModal(false);
-    setEmail('');
-    setPassword('');
   };
 
   return (
@@ -75,6 +64,23 @@ export function LoginPage() {
           </CardHeader>
 
           <CardContent>
+            {/* Error Alert - inline, không có backdrop */}
+            {showErrorAlert && (
+              <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-700">Đăng nhập thất bại</p>
+                  <p className="mt-0.5 text-sm text-red-600">{errorMessage}</p>
+                </div>
+                <button
+                  onClick={() => setShowErrorAlert(false)}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -83,7 +89,7 @@ export function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="abc123@email.com"
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -205,34 +211,6 @@ export function LoginPage() {
           </CardFooter>
         </Card>
       </div>
-
-      {/* Error Modal - ĐÃ BỎ DẤU X, CHỈ GIỮ NÚT QUAY LẠI */}
-      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
-        <DialogContent
-          className="bg-white rounded-lg p-6 shadow-lg [&>button]:hidden"
-          style={{
-            zIndex: 1000,
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: '400px',
-            width: '90vw',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-red-600 text-center text-lg font-semibold">
-              Đăng nhập thất bại
-            </DialogTitle>
-            <DialogDescription className="pt-1 text-center text-sm text-gray-600">
-              Tài khoản hoặc mật khẩu không đúng
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

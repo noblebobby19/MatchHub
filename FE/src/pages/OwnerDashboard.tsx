@@ -11,11 +11,12 @@ import {
   Users,
   MapPin,
   Edit,
-  Trash2,
   Loader2,
   Ban,
   CheckCircle,
-  Home
+  Home,
+  Banknote,
+  CheckCircle2
 } from 'lucide-react';
 import { WeeklyScheduler } from '../components/scheduler/WeeklyScheduler';
 import { Button } from '../components/ui/button';
@@ -70,6 +71,10 @@ interface Booking {
   timeSlot: string;
   status: string;
   amountValue?: number;
+  depositAmount?: number;
+  bookingCode?: string;
+  paymentMethod?: string;
+  expireAt?: string;
   amount: string;
   createdAt: string;
 }
@@ -77,7 +82,7 @@ interface Booking {
 export function OwnerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'bookings' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'bookings' | 'banking' | 'settings'>('overview');
   const [fields, setFields] = useState<Field[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -634,6 +639,134 @@ export function OwnerDashboard() {
           </div>
         );
 
+      case 'banking': {
+        if (isLoading) {
+          return (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            </div>
+          );
+        }
+
+        const bankingBookings = bookings.filter((b: any) => b.paymentMethod === 'banking');
+
+        const statusConfig: Record<string, { label: string; className: string }> = {
+          PENDING: { label: '⏳ Chờ CK', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+          CONFIRMED: { label: '✅ Đã xác nhận', className: 'bg-green-100 text-green-800 border-green-300' },
+          EXPIRED: { label: '⏰ Hết hạn', className: 'bg-gray-100 text-gray-600 border-gray-300' },
+          CANCELLED: { label: '❌ Đã hủy', className: 'bg-red-100 text-red-800 border-red-300' },
+          REFUND_PENDING: { label: '💸 Chờ hoàn TM', className: 'bg-orange-100 text-orange-800 border-orange-300' },
+          REFUNDED: { label: '✅ Đã hoàn TM', className: 'bg-purple-100 text-purple-800 border-purple-300' },
+        };
+
+        const handleConfirmPayment = async (id: string) => {
+          try {
+            await apiService.confirmPayment(id);
+            toast.success('Đã xác nhận thanh toán! Email xác nhận đã gửi cho khách.');
+            const updated = await apiService.getBookings();
+            setBookings(Array.isArray(updated) ? updated : []);
+          } catch (err: any) {
+            toast.error(err.message || 'Xác nhận thất bại');
+          }
+        };
+
+        const handleMarkRefunded = async (id: string) => {
+          try {
+            await apiService.markRefunded(id);
+            toast.success('Đã đánh dấu hoàn tiền! Email thông báo đã gửi cho khách.');
+            const updated = await apiService.getBookings();
+            setBookings(Array.isArray(updated) ? updated : []);
+          } catch (err: any) {
+            toast.error(err.message || 'Cập nhật thất bại');
+          }
+        };
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl">Thanh toán chuyển khoản</h2>
+              <p className="text-muted-foreground">Xác nhận các đơn đặt sân đã chuyển khoản MB Bank</p>
+            </div>
+
+            {/* Stats nhanh */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(['PENDING', 'CONFIRMED', 'REFUND_PENDING', 'REFUNDED'] as const).map(s => (
+                <div key={s} className={`rounded-lg border p-3 text-center ${statusConfig[s]?.className || ''}`}>
+                  <div className="text-2xl font-bold">{bankingBookings.filter((b: any) => b.status === s).length}</div>
+                  <div className="text-xs mt-0.5">{statusConfig[s]?.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {bankingBookings.length === 0 ? (
+              <Card><CardContent className="py-12 text-center text-muted-foreground">Chưa có đơn chuyển khoản nào</CardContent></Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b bg-gray-50">
+                        <tr>
+                          <th className="text-left p-3 font-medium">Mã đơn</th>
+                          <th className="text-left p-3 font-medium">Khách</th>
+                          <th className="text-left p-3 font-medium">Sân / Giờ</th>
+                          <th className="text-left p-3 font-medium">Tiền cọc</th>
+                          <th className="text-left p-3 font-medium">Trạng thái</th>
+                          <th className="text-left p-3 font-medium">Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {bankingBookings.map((b: any) => {
+                          const cfg = statusConfig[b.status] || { label: b.status, className: 'bg-gray-100 text-gray-700' };
+                          return (
+                            <tr key={b._id} className="hover:bg-gray-50">
+                              <td className="p-3">
+                                <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">{b.bookingCode || '—'}</span>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-medium">{b.userId?.name || b.customer}</div>
+                                <div className="text-xs text-muted-foreground">{b.userId?.email}</div>
+                              </td>
+                              <td className="p-3">
+                                <div>{b.fieldName}</div>
+                                <div className="text-xs text-muted-foreground">{b.date} – {b.time}</div>
+                              </td>
+                              <td className="p-3 font-semibold text-green-700">
+                                {(b.depositAmount || 0).toLocaleString('vi-VN')}đ
+                              </td>
+                              <td className="p-3">
+                                <span className={`text-xs px-2 py-1 rounded border font-medium ${cfg.className}`}>{cfg.label}</span>
+                              </td>
+                              <td className="p-3">
+                                {b.status === 'PENDING' && (
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs h-7"
+                                    onClick={() => handleConfirmPayment(b._id)}>
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />Xác nhận tiền
+                                  </Button>
+                                )}
+                                {b.status === 'REFUND_PENDING' && (
+                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs h-7"
+                                    onClick={() => handleMarkRefunded(b._id)}>
+                                    <Banknote className="h-3 w-3 mr-1" />Đã hoàn tiền
+                                  </Button>
+                                )}
+                                {!['PENDING', 'REFUND_PENDING'].includes(b.status) && (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -697,6 +830,19 @@ export function OwnerDashboard() {
             >
               <CalendarDays className="h-4 w-4 mr-2" />
               Đặt sân
+            </Button>
+            <Button
+              variant={activeTab === 'banking' ? 'default' : 'ghost'}
+              className={`w-full justify-start ${activeTab === 'banking' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              onClick={() => setActiveTab('banking')}
+            >
+              <Banknote className="h-4 w-4 mr-2" />
+              Thanh toán CK
+              {bookings.filter((b: any) => b.paymentMethod === 'banking' && b.status === 'PENDING').length > 0 && (
+                <span className="ml-auto bg-yellow-400 text-yellow-900 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {bookings.filter((b: any) => b.paymentMethod === 'banking' && b.status === 'PENDING').length}
+                </span>
+              )}
             </Button>
             <Button
               variant={activeTab === 'settings' ? 'default' : 'ghost'}

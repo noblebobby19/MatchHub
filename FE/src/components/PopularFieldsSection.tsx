@@ -50,14 +50,14 @@ export function PopularFieldsSection({ onFieldClick, onViewAll }: PopularFieldsS
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {fields.map((field) => (
-              <div 
+              <div
                 key={field._id}
                 onClick={() => onFieldClick?.(field._id)}
                 className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
               >
                 {/* Image */}
                 <div className="relative h-56 overflow-hidden">
-                  <ImageWithFallback 
+                  <ImageWithFallback
                     src={field.image || field.images?.[0] || ""}
                     alt={field.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
@@ -76,11 +76,6 @@ export function PopularFieldsSection({ onFieldClick, onViewAll }: PopularFieldsS
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span>{field.rating || 0}</span>
-                      <span className="text-sm text-muted-foreground">({field.reviews || 0})</span>
-                    </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
                       {field.size}
@@ -92,7 +87,7 @@ export function PopularFieldsSection({ onFieldClick, onViewAll }: PopularFieldsS
                       <div className="text-sm text-muted-foreground">Giá từ</div>
                       <div className="text-green-600">{field.price}/giờ</div>
                     </div>
-                    <Button 
+                    <Button
                       className="bg-green-600 hover:bg-green-700"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -109,9 +104,9 @@ export function PopularFieldsSection({ onFieldClick, onViewAll }: PopularFieldsS
         )}
 
         <div className="text-center">
-          <Button 
-            variant="outline" 
-            size="lg" 
+          <Button
+            variant="outline"
+            size="lg"
             className="border-green-600 text-green-600 hover:bg-green-50"
             onClick={onViewAll}
           >

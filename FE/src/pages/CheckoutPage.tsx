@@ -19,7 +19,7 @@ export function CheckoutPage() {
   const { user } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -97,16 +97,16 @@ export function CheckoutPage() {
         console.log('📝 Creating booking with data:', bookingRequestData);
         console.log('🔑 Token exists:', !!token);
         console.log('👤 User from context:', user ? { id: user.id, email: user.email, name: user.name } : 'NO USER');
-        
+
         // Log token để debug (chỉ log một phần để bảo mật)
         if (token) {
           console.log('🔑 Token preview:', token.substring(0, 20) + '...' + token.substring(token.length - 10));
         }
-        
+
         const result = await apiService.createBooking(bookingRequestData);
-        
+
         console.log('Booking created successfully:', result);
-        
+
         // Điều hướng sang trang thành công, truyền dữ liệu booking + user + field
         setIsProcessing(false);
         navigate('/dat-san-thanh-cong', {
@@ -121,10 +121,10 @@ export function CheckoutPage() {
       } catch (err: any) {
         console.error("Error processing payment:", err);
         setIsProcessing(false);
-        
+
         // Handle specific error messages
         let errorMessage = err?.message || "Thanh toán thất bại. Vui lòng thử lại.";
-        
+
         // Check if error is about authentication
         if (errorMessage.includes('đăng nhập') || errorMessage.includes('token') || errorMessage.includes('401')) {
           toast.error(errorMessage);
@@ -136,8 +136,51 @@ export function CheckoutPage() {
         }
       }
     } else {
-      // Ngân hàng - chỉ hiển thị thông báo (chờ user suy nghĩ)
-      toast.info("Tính năng thanh toán ngân hàng đang được phát triển");
+      // Chuyển khoản ngân hàng – tạo banking booking và chuyển sang trang QR
+      setIsProcessing(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          toast.error("Bạn cần đăng nhập để thanh toán.");
+          setIsProcessing(false);
+          navigate('/dang-nhap');
+          return;
+        }
+
+        if (!formData.name || !formData.email || !formData.phone) {
+          toast.error("Vui lòng điền đầy đủ thông tin khách hàng");
+          setIsProcessing(false);
+          return;
+        }
+
+        const result = await apiService.createBankingBooking({
+          fieldId: bookingData.fieldId,
+          date,
+          time: timeSlot.time,
+          timeSlot: timeSlot.time,
+          amount: timeSlot.price
+        });
+
+        setIsProcessing(false);
+        navigate('/thanh-toan-qr', {
+          state: {
+            bookingCode: result.bookingCode,
+            depositAmount: result.depositAmount,
+            expireAt: result.expireAt,
+            bookingId: result.booking._id,
+            bankConfig: result.bankConfig,
+            bookingInfo: {
+              fieldName: field.name,
+              date,
+              time: timeSlot.time,
+              amountValue: result.booking.amountValue
+            }
+          }
+        });
+      } catch (err: any) {
+        setIsProcessing(false);
+        toast.error(err?.message || "Tạo đơn thất bại. Vui lòng thử lại.");
+      }
     }
   };
 
@@ -190,7 +233,7 @@ export function CheckoutPage() {
                           <span className="font-medium">{timeSlot.time}</span>
                         </div>
                         <span className="text-muted-foreground">
-                          {new Date(date).toLocaleDateString('vi-VN', { 
+                          {new Date(date).toLocaleDateString('vi-VN', {
                             weekday: 'long',
                             year: 'numeric',
                             month: 'long',
@@ -250,44 +293,44 @@ export function CheckoutPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="name">Họ và tên *</Label>
-                    <Input 
-                      id="name" 
+                    <Input
+                      id="name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="mt-1" 
+                      className="mt-1"
                       required
                     />
                   </div>
                   <div>
                     <Label htmlFor="email">Email *</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
+                    <Input
+                      id="email"
+                      type="email"
                       value={formData.email}
                       onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="mt-1" 
+                      className="mt-1"
                       required
                     />
                   </div>
                   <div>
                     <Label htmlFor="phone">Số điện thoại *</Label>
-                    <Input 
-                      id="phone" 
+                    <Input
+                      id="phone"
                       placeholder="Nhập số điện thoại"
                       value={formData.phone}
                       onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      className="mt-1" 
+                      className="mt-1"
                       required
                     />
                   </div>
                   <div>
                     <Label htmlFor="note">Ghi chú</Label>
-                    <Textarea 
-                      id="note" 
+                    <Textarea
+                      id="note"
                       placeholder="Nhập ghi chú (nếu có)"
                       value={formData.note}
                       onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-                      className="mt-1 min-h-[100px]" 
+                      className="mt-1 min-h-[100px]"
                       rows={4}
                     />
                   </div>

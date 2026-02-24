@@ -21,7 +21,7 @@ export const createContact = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Server Error',
+            message: 'Lỗi máy chủ. Vui lòng thử lại sau.',
             error: error.message
         });
     }
@@ -109,7 +109,7 @@ export const deleteContact = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Contact removed'
+            message: 'Đã xóa liên hệ thành công.'
         });
     } catch (error) {
         res.status(500).json({

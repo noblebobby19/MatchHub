@@ -1,18 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Lock, User as UserIcon, Loader2, Eye, EyeOff, MapPin } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User as UserIcon, Loader2, Eye, EyeOff, MapPin, CheckCircle, XCircle, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
 import { useAuth } from '../context/AuthContext';
 
 export function RegisterPage() {
@@ -26,8 +18,8 @@ export function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,38 +27,29 @@ export function RegisterPage() {
 
     if (password !== confirmPassword) {
       setErrorMessage('Mật khẩu không khớp!');
-      setShowErrorModal(true);
+      setShowErrorAlert(true);
+      setShowSuccessAlert(false);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Không cần truyền role, backend sẽ tự động xác định từ database hoặc mặc định là 'user'
       await register(name, email, password, 'user', address);
 
-      // Xóa token và user để người dùng phải đăng nhập lại
       localStorage.removeItem('token');
       localStorage.removeItem('user');
 
-      // Hiển thị modal thành công
-      setShowSuccessModal(true);
+      setShowSuccessAlert(true);
+      setShowErrorAlert(false);
     } catch (error: any) {
       console.error('Registration failed:', error);
       setErrorMessage(error.message || 'Đăng ký thất bại. Vui lòng thử lại.');
-      setShowErrorModal(true);
+      setShowErrorAlert(true);
+      setShowSuccessAlert(false);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCloseErrorModal = () => {
-    setShowErrorModal(false);
-  };
-
-  const handleSuccessModalClose = () => {
-    setShowSuccessModal(false);
-    navigate('/dang-nhap');
   };
 
   return (
@@ -86,6 +69,49 @@ export function RegisterPage() {
           </CardHeader>
 
           <CardContent>
+            {/* Success Alert */}
+            {showSuccessAlert && (
+              <div className="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-green-700">Đăng ký thành công!</p>
+                  <p className="mt-0.5 text-sm text-green-600">
+                    Tài khoản của bạn đã được tạo. Vui lòng đăng nhập để tiếp tục.
+                  </p>
+                  <Button
+                    onClick={() => navigate('/dang-nhap')}
+                    className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    Đăng nhập ngay
+                  </Button>
+                </div>
+                <button
+                  onClick={() => setShowSuccessAlert(false)}
+                  className="text-green-400 hover:text-green-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Error Alert */}
+            {showErrorAlert && (
+              <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-700">Đăng ký thất bại</p>
+                  <p className="mt-0.5 text-sm text-red-600">{errorMessage}</p>
+                </div>
+                <button
+                  onClick={() => setShowErrorAlert(false)}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Họ và tên</Label>
@@ -110,7 +136,7 @@ export function RegisterPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="abc123@email.com"
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -265,73 +291,6 @@ export function RegisterPage() {
           </CardFooter>
         </Card>
       </div>
-
-      {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent
-          className="bg-white rounded-lg p-6 shadow-lg [&>button]:hidden"
-          style={{
-            zIndex: 1000,
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: '400px',
-            width: '90vw',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-green-600 text-center text-lg font-semibold">
-              Đăng ký thành công!
-            </DialogTitle>
-            <DialogDescription className="pt-1 text-center text-sm text-gray-600">
-              Tài khoản của bạn đã được tạo thành công. Vui lòng đăng nhập để tiếp tục.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              onClick={handleSuccessModalClose}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              Đăng nhập ngay
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Error Modal */}
-      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
-        <DialogContent
-          className="bg-white rounded-lg p-6 shadow-lg [&>button]:hidden"
-          style={{
-            zIndex: 1000,
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: '400px',
-            width: '90vw',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-red-600 text-center text-lg font-semibold">
-              Đăng ký thất bại
-            </DialogTitle>
-            <DialogDescription className="pt-1 text-center text-sm text-gray-600">
-              {errorMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              onClick={handleCloseErrorModal}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

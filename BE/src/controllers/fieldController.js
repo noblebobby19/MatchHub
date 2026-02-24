@@ -87,7 +87,7 @@ export const getFieldById = async (req, res) => {
     const field = await Field.findById(req.params.id).populate('ownerId', 'name email phone');
 
     if (!field) {
-      return res.status(404).json({ message: 'Field not found' });
+      return res.status(404).json({ message: 'Không tìm thấy sân.' });
     }
 
     // Trả về dữ liệu từ database
@@ -137,14 +137,14 @@ export const updateField = async (req, res) => {
     const field = await Field.findById(req.params.id);
 
     if (!field) {
-      return res.status(404).json({ message: 'Field not found' });
+      return res.status(404).json({ message: 'Không tìm thấy sân.' });
     }
 
     // Check if user is owner or admin
     // Check if user is owner (admin) - Allow all owners to edit any field
     if (req.user.role !== 'owner') {
       if (field.ownerId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
+        return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa sân này.' });
       }
     }
 
@@ -167,19 +167,19 @@ export const deleteField = async (req, res) => {
     const field = await Field.findById(req.params.id);
 
     if (!field) {
-      return res.status(404).json({ message: 'Field not found' });
+      return res.status(404).json({ message: 'Không tìm thấy sân.' });
     }
 
     // Check if user is owner or admin
     // Check if user is owner (admin)
     if (req.user.role !== 'owner') {
       if (field.ownerId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
+        return res.status(403).json({ message: 'Bạn không có quyền xóa sân này.' });
       }
     }
 
     await Field.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Field deleted successfully' });
+    res.json({ message: 'Xóa sân thành công.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

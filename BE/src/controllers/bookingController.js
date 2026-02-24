@@ -1,6 +1,8 @@
 import Booking from '../models/Booking.js';
 import Field from '../models/Field.js';
 import User from '../models/User.js';
+import BankConfig from '../models/BankConfig.js';
+import sendEmail from '../utils/sendEmail.js';
 
 export const createBooking = async (req, res) => {
   try {
@@ -93,7 +95,7 @@ export const checkAvailability = async (req, res) => {
     const { fieldId, date, userId } = req.query;
 
     if (!fieldId || !date) {
-      return res.status(400).json({ message: 'Missing fieldId or date' });
+      return res.status(400).json({ message: 'Thiếu thông tin fieldId hoặc ngày.' });
     }
 
     console.log(`🔍 Checking availability for Field: ${fieldId}, Date: ${date}, User: ${userId || 'Guest'}`);
@@ -166,14 +168,14 @@ export const getBookingById = async (req, res) => {
       .populate('userId', 'name email phone');
 
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn đặt sân.' });
     }
 
     // Check access - admin can see all, owner can see their field bookings, user can see their own
     // Check access - owner (admin) can see all, user can see their own
     if (req.user.role !== 'owner') {
       if (booking.userId._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
+        return res.status(403).json({ message: 'Bạn không có quyền xem đơn đặt sân này.' });
       }
     }
 
@@ -194,7 +196,7 @@ export const updateBookingStatus = async (req, res) => {
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn đặt sân.' });
     }
 
     // Lấy field từ database để kiểm tra quyền
@@ -202,7 +204,7 @@ export const updateBookingStatus = async (req, res) => {
     if (req.user.role !== 'owner') {
       // Regular user can only update their own bookings
       if (booking.userId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
+        return res.status(403).json({ message: 'Bạn không có quyền cập nhật đơn này.' });
       }
     }
 
@@ -263,20 +265,350 @@ export const deleteBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: 'Không tìm thấy đơn đặt sân.' });
     }
 
 
     if (req.user.role !== 'owner') {
       // Regular user can only delete their own bookings
       if (booking.userId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Access denied' });
+        return res.status(403).json({ message: 'Bạn không có quyền xóa đơn này.' });
       }
     }
 
     await Booking.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Booking deleted successfully' });
+    res.json({ message: 'Xóa đơn đặt sân thành công.' });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  BANKING PAYMENT FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Sinh booking_code ngẫu nhiên dạng DAT_SAN_XXXXXX
+ */
+const generateBookingCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `DAT_SAN_${code}`;
+};
+
+/**
+ * POST /api/bookings/banking
+ * Tạo booking chuyển khoản: sinh bookingCode, tính depositAmount, set expireAt
+ * Auth: user đã đăng nhập
+ */
+export const createBankingBooking = async (req, res) => {
+  try {
+    console.log('💳 Creating BANKING booking...');
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'Vui lòng đăng nhập để đặt sân.' });
+    }
+
+    const { fieldId, date, time, timeSlot, amount } = req.body;
+
+    if (!fieldId || !date || !time || !amount) {
+      return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
+    }
+
+    // Kiểm tra field
+    const field = await Field.findById(fieldId);
+    if (!field) return res.status(404).json({ message: 'Sân không tồn tại' });
+
+    // Kiểm tra user
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User không tồn tại' });
+
+    // Kiểm tra slot đã được confirmed chưa
+    const existingConfirmed = await Booking.findOne({
+      fieldId, date, time,
+      status: { $in: ['confirmed', 'CONFIRMED', 'completed'] }
+    });
+    if (existingConfirmed) {
+      return res.status(409).json({ message: 'Khung giờ này đã được đặt. Vui lòng chọn giờ khác.' });
+    }
+
+    // Kiểm tra user đã đặt slot này chưa (đang PENDING banking)
+    const myPending = await Booking.findOne({
+      fieldId, date, time,
+      userId: req.user._id,
+      status: { $in: ['pending', 'PENDING'] }
+    });
+    if (myPending) {
+      return res.status(409).json({ message: 'Bạn đã có đơn đặt sân này đang chờ xác nhận.' });
+    }
+
+    // Lấy cấu hình ngân hàng
+    let bankConfig = await BankConfig.findOne();
+    if (!bankConfig) {
+      bankConfig = await BankConfig.create({
+        bankCode: 'MB',
+        accountNumber: '0336743580',
+        accountName: 'TRAN LE HOANG THIEN',
+        depositPercent: 30
+      });
+    }
+
+    // Tính tiền
+    const amountValue = parseInt(String(amount).replace(/[^\d]/g, '')) || 0;
+    const depositAmount = Math.round(amountValue * bankConfig.depositPercent / 100);
+
+    // Sinh booking code (đảm bảo unique)
+    let bookingCode;
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 10) {
+      bookingCode = generateBookingCode();
+      const existing = await Booking.findOne({ bookingCode });
+      if (!existing) isUnique = true;
+      attempts++;
+    }
+
+    const expireAt = new Date(Date.now() + 15 * 60 * 1000); // +15 phút
+
+    // Tạo booking
+    const booking = await Booking.create({
+      fieldId,
+      userId: req.user._id,
+      fieldName: field.name,
+      customer: user.name,
+      date,
+      time,
+      timeSlot: timeSlot || time,
+      status: 'PENDING',
+      amount: String(amount),
+      amountValue,
+      paymentMethod: 'banking',
+      bookingCode,
+      depositAmount,
+      expireAt
+    });
+
+    console.log(`✅ Banking booking created: ${bookingCode}, deposit: ${depositAmount}đ, expires: ${expireAt}`);
+
+    res.status(201).json({
+      booking,
+      bookingCode,
+      depositAmount,
+      expireAt,
+      bankConfig: {
+        bankCode: bankConfig.bankCode,
+        accountNumber: bankConfig.accountNumber,
+        accountName: bankConfig.accountName
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creating banking booking:', error);
+    res.status(500).json({ message: error.message || 'Lỗi khi tạo booking' });
+  }
+};
+
+/**
+ * PUT /api/bookings/:id/confirm
+ * Owner xác nhận đã nhận tiền → PENDING → CONFIRMED
+ * Auth: owner only
+ */
+export const confirmPayment = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('userId', 'name email');
+    if (!booking) return res.status(404).json({ message: 'Booking không tồn tại' });
+
+    if (booking.paymentMethod !== 'banking') {
+      return res.status(400).json({ message: 'Booking này không phải chuyển khoản' });
+    }
+
+    if (booking.status !== 'PENDING') {
+      return res.status(400).json({ message: `Không thể xác nhận booking đang ở trạng thái ${booking.status}` });
+    }
+
+    // Kiểm tra conflict slot
+    const conflict = await Booking.findOne({
+      _id: { $ne: booking._id },
+      fieldId: booking.fieldId,
+      date: booking.date,
+      time: booking.time,
+      status: { $in: ['confirmed', 'CONFIRMED'] }
+    });
+    if (conflict) {
+      return res.status(409).json({ message: 'Khung giờ này đã được xác nhận cho đơn khác.' });
+    }
+
+    booking.status = 'CONFIRMED';
+    await booking.save();
+
+    // Gửi notification
+    try {
+      await Notification.create({
+        user: booking.userId._id || booking.userId,
+        title: '✅ Đặt sân thành công!',
+        message: `Đơn đặt sân ${booking.fieldName} (${booking.date} - ${booking.time}) đã được xác nhận. Mã đơn: ${booking.bookingCode}`,
+        type: 'success',
+        link: `/chi-tiet-don-dat-san/${booking._id}`
+      });
+    } catch (e) { console.error('Notification error:', e.message); }
+
+    // Gửi email cho user
+    try {
+      const userEmail = booking.userId?.email;
+      if (userEmail) {
+        await sendEmail({
+          email: userEmail,
+          subject: '✅ MatchHub – Đặt sân thành công!',
+          message: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              <h2 style="color:#16a34a">🏟️ Đặt sân thành công!</h2>
+              <p>Xin chào <strong>${booking.userId?.name || booking.customer}</strong>,</p>
+              <p>Chủ sân đã xác nhận đơn đặt sân của bạn.</p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                <tr><td style="padding:8px;background:#f0fdf4"><strong>Mã đơn:</strong></td><td style="padding:8px">${booking.bookingCode}</td></tr>
+                <tr><td style="padding:8px"><strong>Sân:</strong></td><td style="padding:8px">${booking.fieldName}</td></tr>
+                <tr><td style="padding:8px;background:#f0fdf4"><strong>Ngày:</strong></td><td style="padding:8px">${booking.date}</td></tr>
+                <tr><td style="padding:8px"><strong>Giờ:</strong></td><td style="padding:8px">${booking.time}</td></tr>
+                <tr><td style="padding:8px;background:#f0fdf4"><strong>Tiền cọc đã thanh toán:</strong></td><td style="padding:8px">${booking.depositAmount?.toLocaleString('vi-VN')}đ</td></tr>
+              </table>
+              <p>Cảm ơn bạn đã sử dụng MatchHub! 🎉</p>
+            </div>
+          `
+        });
+        console.log('📧 Confirmation email sent to:', userEmail);
+      }
+    } catch (e) { console.error('Email error:', e.message); }
+
+    res.json({ message: 'Xác nhận thanh toán thành công', booking });
+  } catch (error) {
+    console.error('❌ Error confirming payment:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * PUT /api/bookings/:id/cancel
+ * User hủy booking: trước 24h → REFUND_PENDING, sau 24h → CANCELLED
+ * Auth: user (chỉ hủy đơn của mình)
+ */
+export const cancelBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('userId', 'name email');
+    if (!booking) return res.status(404).json({ message: 'Booking không tồn tại' });
+
+    // Chỉ owner của booking mới được hủy
+    if (booking.userId._id.toString() !== req.user._id.toString() && req.user.role !== 'owner') {
+      return res.status(403).json({ message: 'Bạn không có quyền hủy đơn này' });
+    }
+
+    if (!['PENDING', 'CONFIRMED'].includes(booking.status)) {
+      return res.status(400).json({ message: `Không thể hủy đơn đang ở trạng thái ${booking.status}` });
+    }
+
+    // Kiểm tra 24h: booking.date + booking.time so với hiện tại
+    const [year, month, day] = booking.date.split('-').map(Number);
+    const [startHour] = booking.time.split(':').map(Number);
+    const bookingDateTime = new Date(year, month - 1, day, startHour, 0, 0);
+    const now = new Date();
+    const diffMs = bookingDateTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    let newStatus;
+    let refundNote;
+
+    if (booking.paymentMethod === 'banking' && booking.status === 'CONFIRMED' && diffHours >= 24) {
+      newStatus = 'REFUND_PENDING';
+      refundNote = 'Hủy trước 24h – đủ điều kiện hoàn tiền cọc.';
+    } else if (booking.paymentMethod === 'banking' && booking.status === 'PENDING') {
+      // PENDING chưa xác nhận → hủy luôn, không hoàn (chưa mất tiền)
+      newStatus = 'CANCELLED';
+      refundNote = 'Hủy khi đang chờ xác nhận.';
+    } else {
+      newStatus = 'CANCELLED';
+      refundNote = 'Hủy sau 24h hoặc thanh toán tiền mặt – không hoàn tiền.';
+    }
+
+    booking.status = newStatus;
+    await booking.save();
+
+    // Notification
+    try {
+      await Notification.create({
+        user: booking.userId._id || booking.userId,
+        title: newStatus === 'REFUND_PENDING' ? '💸 Yêu cầu hoàn tiền đã được ghi nhận' : '❌ Đặt sân đã hủy',
+        message: newStatus === 'REFUND_PENDING'
+          ? `Đơn ${booking.bookingCode} đã hủy. Chủ sân sẽ hoàn lại tiền cọc ${booking.depositAmount?.toLocaleString('vi-VN')}đ trong thời gian sớm nhất.`
+          : `Đơn đặt sân ${booking.fieldName} (${booking.date} - ${booking.time}) đã bị hủy.`,
+        type: 'warning',
+        link: `/chi-tiet-don-dat-san/${booking._id}`
+      });
+    } catch (e) { console.error('Notification error:', e.message); }
+
+    res.json({ message: `Hủy đơn thành công. Trạng thái: ${newStatus}`, booking, refundNote });
+  } catch (error) {
+    console.error('❌ Error cancelling booking:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * PUT /api/bookings/:id/refunded
+ * Owner đánh dấu đã hoàn tiền → REFUND_PENDING → REFUNDED
+ * Auth: owner only
+ */
+export const markRefunded = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('userId', 'name email');
+    if (!booking) return res.status(404).json({ message: 'Booking không tồn tại' });
+
+    if (booking.status !== 'REFUND_PENDING') {
+      return res.status(400).json({ message: `Booking không ở trạng thái REFUND_PENDING, hiện tại: ${booking.status}` });
+    }
+
+    booking.status = 'REFUNDED';
+    await booking.save();
+
+    // Notification
+    try {
+      await Notification.create({
+        user: booking.userId._id || booking.userId,
+        title: '✅ Hoàn tiền thành công',
+        message: `Chủ sân đã hoàn ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc cho đơn ${booking.bookingCode}.`,
+        type: 'success',
+        link: `/chi-tiet-don-dat-san/${booking._id}`
+      });
+    } catch (e) { console.error('Notification error:', e.message); }
+
+    // Gửi email hoàn tiền
+    try {
+      const userEmail = booking.userId?.email;
+      if (userEmail) {
+        await sendEmail({
+          email: userEmail,
+          subject: '💸 MatchHub – Hoàn tiền thành công',
+          message: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              <h2 style="color:#2563eb">💸 Hoàn tiền thành công</h2>
+              <p>Xin chào <strong>${booking.userId?.name || booking.customer}</strong>,</p>
+              <p>Chủ sân đã hoàn lại tiền cọc cho đơn hủy của bạn.</p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                <tr><td style="padding:8px;background:#eff6ff"><strong>Mã đơn:</strong></td><td style="padding:8px">${booking.bookingCode}</td></tr>
+                <tr><td style="padding:8px"><strong>Số tiền hoàn:</strong></td><td style="padding:8px;color:#16a34a;font-weight:bold">${booking.depositAmount?.toLocaleString('vi-VN')}đ</td></tr>
+                <tr><td style="padding:8px;background:#eff6ff"><strong>Sân:</strong></td><td style="padding:8px">${booking.fieldName}</td></tr>
+              </table>
+              <p>Cảm ơn bạn đã tin tưởng sử dụng MatchHub!</p>
+            </div>
+          `
+        });
+        console.log('📧 Refund email sent to:', userEmail);
+      }
+    } catch (e) { console.error('Email error:', e.message); }
+
+    res.json({ message: 'Đã đánh dấu hoàn tiền thành công', booking });
+  } catch (error) {
+    console.error('❌ Error marking refunded:', error);
     res.status(500).json({ message: error.message });
   }
 };

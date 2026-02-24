@@ -12,7 +12,9 @@ import postRoutes from './src/routes/postRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import contactRoutes from './src/routes/contactRoutes.js';
+import bankConfigRoutes from './src/routes/bankConfigRoutes.js';
 import passport from './src/config/passport.js';
+import startExpireBookingsJob from './src/jobs/expireBookings.js';
 
 dotenv.config();
 
@@ -60,7 +62,10 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(() => {
+  // Khởi động cron job sau khi kết nối DB thành công
+  startExpireBookingsJob();
+});
 
 // Routes
 app.get('/', (req, res) => {
@@ -83,6 +88,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/bank-config', bankConfigRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

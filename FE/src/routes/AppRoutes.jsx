@@ -24,6 +24,7 @@ import { PostDetailPage } from "../pages/PostDetailPage";
 import { OpponentDetailPage } from "../pages/OpponentDetailPage";
 import { JoinRequestPage } from "../pages/JoinRequestPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { BankingPaymentPage } from "../pages/BankingPaymentPage";
 import { AuthProvider } from "../context/AuthContext";
 
 // Component để kiểm tra xem có nên hiển thị header/footer không
@@ -33,7 +34,8 @@ function Layout({ children }) {
     location.pathname !== '/them-san-moi' &&
     location.pathname !== '/dang-nhap' &&
     location.pathname !== '/register' &&
-    location.pathname !== '/thanh-toan';
+    location.pathname !== '/thanh-toan' &&
+    location.pathname !== '/thanh-toan-qr';
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,6 +82,7 @@ export function AppRoutes() {
             <Route path="/chi-tiet-doi-thu/:id" element={<OpponentDetailPage />} />
             <Route path="/xin-tham-gia/:id" element={<JoinRequestPage />} />
             <Route path="/thong-bao" element={<NotificationsPage />} />
+            <Route path="/thanh-toan-qr" element={<BankingPaymentPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

@@ -425,7 +425,7 @@ export function AdminDashboard() {
 
             {/* Reply Dialog */}
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-                <DialogContent className="sm:max-w-[525px]">
+                <DialogContent className="sm:max-w-[525px]" >
                     <DialogHeader>
                         <DialogTitle>Chi tiết tin nhắn</DialogTitle>
                         <DialogDescription>
