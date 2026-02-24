@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Clock, Loader2, Eye } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Loader2, Eye, Ban } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -22,6 +22,7 @@ interface Booking {
   createdAt: string;
   amountValue?: number;
   totalPrice?: number;
+  paymentMethod?: string;
 }
 
 export function BookingHistoryPage() {
@@ -30,30 +31,48 @@ export function BookingHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
+
+  const fetchBookings = async () => {
+    if (!user) {
+      navigate('/dang-nhap');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await apiService.getBookings();
+      setBookings(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Failed to fetch bookings:', error);
+      setError(error.message || 'Không thể tải lịch sử đặt sân');
+      toast.error('Không thể tải lịch sử đặt sân');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      if (!user) {
-        navigate('/dang-nhap');
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await apiService.getBookings();
-        setBookings(Array.isArray(data) ? data : []);
-      } catch (error: any) {
-        console.error('Failed to fetch bookings:', error);
-        setError(error.message || 'Không thể tải lịch sử đặt sân');
-        toast.error('Không thể tải lịch sử đặt sân');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchBookings();
   }, [user, navigate]);
+
+  const handleCancelBooking = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn đặt sân này?')) return;
+
+    setIsCancelling(id);
+    try {
+      await apiService.cancelBooking(id);
+      toast.success('Hủy đơn đặt sân thành công');
+      await fetchBookings();
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể hủy đơn đặt sân');
+    } finally {
+      setIsCancelling(null);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     try {
@@ -78,9 +97,14 @@ export function BookingHistoryPage() {
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
       pending: { label: 'Chờ xác nhận', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' },
+      PENDING: { label: 'Chờ xác nhận', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' },
       confirmed: { label: 'Đã xác nhận', className: 'bg-green-100 text-green-800 hover:bg-green-200' },
+      CONFIRMED: { label: 'Đã xác nhận', className: 'bg-green-100 text-green-800 hover:bg-green-200' },
       completed: { label: 'Hoàn thành', className: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
-      cancelled: { label: 'Đã hủy', className: 'bg-red-100 text-red-800 hover:bg-red-200' }
+      cancelled: { label: 'Đã hủy', className: 'bg-red-100 text-red-800 hover:bg-red-200' },
+      CANCELLED: { label: 'Đã hủy', className: 'bg-red-100 text-red-800 hover:bg-red-200' },
+      REFUND_PENDING: { label: 'Chờ hoàn tiền', className: 'bg-orange-100 text-orange-800 hover:bg-orange-200' },
+      REFUNDED: { label: 'Đã hoàn tiền', className: 'bg-purple-100 text-purple-800 hover:bg-purple-200' },
     };
 
     const statusInfo = statusMap[status] || { label: status || 'N/A', className: 'bg-gray-100 text-gray-800' };
@@ -140,57 +164,137 @@ export function BookingHistoryPage() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {bookings.map((booking) => (
-                  <Card key={booking._id || Math.random()} className="border-l-4 border-l-green-600">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {booking.fieldId?.name || 'Sân bóng'}
-                            </h3>
-                            {getStatusBadge(booking.status || 'pending')}
-                          </div>
+              <div className="space-y-6">
+                {/* Logic phân trang */}
+                {(() => {
+                  const totalPages = Math.ceil(bookings.length / itemsPerPage);
+                  const currentBookings = bookings.slice(
+                    (currentPage - 1) * itemsPerPage,
+                    currentPage * itemsPerPage
+                  );
 
-                          <div className="space-y-2 text-sm text-gray-600">
+                  return (
+                    <>
+                      <div className="space-y-4">
+                        {currentBookings.map((booking) => (
+                          <Card key={booking._id || Math.random()} className="border-l-4 border-l-green-600 hover:shadow-md transition-shadow">
+                            <CardContent className="p-6">
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div className="flex-1 space-y-3">
+                                  <div className="flex items-start justify-between">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                      {booking.fieldId?.name || 'Sân bóng'}
+                                    </h3>
+                                    {getStatusBadge(booking.status || 'pending')}
+                                  </div>
 
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-green-600" />
-                              <span>{formatDate(booking.date || '')}</span>
-                            </div>
+                                  <div className="space-y-2 text-sm text-gray-600">
 
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-green-600" />
-                              <span>
-                                {formatTime(booking.timeSlot || '')}
-                              </span>
-                            </div>
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-green-600" />
+                                      <span>{formatDate(booking.date || '')}</span>
+                                    </div>
 
-                            <div className="pt-2">
-                              <span className="font-semibold text-green-600">
-                                {(booking.amountValue || booking.totalPrice || 0).toLocaleString('vi-VN')}đ
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-green-600" />
+                                      <span>
+                                        {formatTime(booking.timeSlot || '')}
+                                      </span>
+                                    </div>
 
-                        <div className="flex gap-2">
-                          {booking._id && (
+                                    <div className="pt-2">
+                                      <span className="font-semibold text-green-600 text-base">
+                                        {(booking.amountValue || booking.totalPrice || 0).toLocaleString('vi-VN')}đ
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 flex-wrap md:flex-nowrap">
+                                  {['pending', 'confirmed', 'PENDING', 'CONFIRMED'].includes(booking.status) && booking.paymentMethod === 'banking' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleCancelBooking(booking._id)}
+                                      disabled={isCancelling === booking._id}
+                                      className="text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                      {isCancelling === booking._id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                      ) : (
+                                        <Ban className="h-4 w-4 mr-2" />
+                                      )}
+                                      Hủy đơn
+                                    </Button>
+                                  )}
+                                  {booking._id && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => navigate(`/chi-tiet-don-dat-san/${booking._id}`)}
+                                      className="border-green-200 hover:bg-green-50 text-green-700 hover:text-green-800"
+                                    >
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Xem chi tiết
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+
+                      {/* Phân trang căn giữa */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-center pt-6 border-t mt-6">
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/chi-tiet-don-dat-san/${booking._id}`)}
+                              onClick={() => {
+                                setCurrentPage(p => Math.max(1, p - 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              disabled={currentPage === 1}
+                              className="px-4"
                             >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
+                              Trước
                             </Button>
-                          )}
+                            <div className="flex gap-1 items-center">
+                              {[...Array(totalPages)].map((_, i) => (
+                                <Button
+                                  key={i}
+                                  variant={currentPage === i + 1 ? "default" : "outline"}
+                                  size="sm"
+                                  className={`w-9 h-9 p-0 ${currentPage === i + 1 ? "bg-green-600 hover:bg-green-700" : ""}`}
+                                  onClick={() => {
+                                    setCurrentPage(i + 1);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                >
+                                  {i + 1}
+                                </Button>
+                              ))}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCurrentPage(p => Math.min(totalPages, p + 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              disabled={currentPage === totalPages}
+                              className="px-4"
+                            >
+                              Sau
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </CardContent>

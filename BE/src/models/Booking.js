@@ -66,6 +66,14 @@ const bookingSchema = new mongoose.Schema({
   expireAt: {
     type: Date,
     default: null // chỉ set khi paymentMethod = 'banking'
+  },
+  cancelledAt: {
+    type: Date,
+    default: null
+  },
+  refundedAt: {
+    type: Date,
+    default: null
   }
   // ───────────────────────────────────────────────────────────────
 }, {

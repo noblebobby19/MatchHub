@@ -261,7 +261,7 @@ export function FieldDetailPage() {
                               const isSelected = selectedTimeSlot?.time === slot.time;
                               // Check if slot is booked
                               const isBooked = bookedSlots.some(
-                                b => b.time === slot.time && ['pending', 'confirmed', 'completed'].includes(b.status)
+                                b => b.time === slot.time && ['pending', 'confirmed', 'completed', 'PENDING', 'CONFIRMED'].includes(b.status)
                               );
                               const isAvailable = !isBooked;
 

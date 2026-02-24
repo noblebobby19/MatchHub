@@ -31,6 +31,7 @@ interface Booking {
     time: string;
     status: string;
     amount: string;
+    paymentMethod?: string;
 }
 
 interface WeeklySchedulerProps {
@@ -77,20 +78,30 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'confirmed': return 'bg-green-100 text-green-700';
-            case 'pending': return 'bg-yellow-100 text-yellow-700';
-            case 'cancelled': return 'bg-red-100 text-red-700';
+            case 'confirmed':
+            case 'CONFIRMED': return 'bg-green-100 text-green-700';
+            case 'pending':
+            case 'PENDING': return 'bg-yellow-100 text-yellow-700';
+            case 'cancelled':
+            case 'CANCELLED': return 'bg-red-100 text-red-700';
             case 'completed': return 'bg-blue-100 text-blue-700';
+            case 'REFUND_PENDING':
+            case 'REFUNDED': return 'bg-purple-100 text-purple-700';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'confirmed': return 'Đã xác nhận';
-            case 'pending': return 'Chờ duyệt';
-            case 'cancelled': return 'Đã hủy';
+            case 'confirmed':
+            case 'CONFIRMED': return 'Đã xác nhận';
+            case 'pending':
+            case 'PENDING': return 'Chờ duyệt';
+            case 'cancelled':
+            case 'CANCELLED': return 'Đã hủy';
             case 'completed': return 'Hoàn thành';
+            case 'REFUND_PENDING': return 'Chờ hoàn tiền';
+            case 'REFUNDED': return 'Đã hoàn tiền';
             default: return status;
         }
     };
@@ -160,13 +171,21 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
                                         {dayBookings
                                             .sort((a, b) => a.time.localeCompare(b.time))
                                             .map((booking) => (
-                                                <Card key={booking._id} className="relative overflow-hidden hover:shadow-md transition-all border-l-4 group" style={{ borderLeftColor: booking.status === 'confirmed' ? '#22c55e' : booking.status === 'pending' ? '#eab308' : '#ef4444' }}>
+                                                <Card key={booking._id} className="relative overflow-hidden hover:shadow-md transition-all border-l-4 group" style={{ borderLeftColor: (booking.status === 'confirmed' || booking.status === 'CONFIRMED') ? '#22c55e' : (booking.status === 'pending' || booking.status === 'PENDING') ? '#eab308' : '#ef4444' }}>
                                                     <CardContent className="p-4">
                                                         <div className="flex justify-between items-start mb-3">
                                                             <div className="flex flex-col">
                                                                 <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                                                                     <CalendarIcon className="h-3.5 w-3.5 text-green-600" />
                                                                     {booking.time}
+                                                                    {booking.paymentMethod && (
+                                                                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold border ${booking.paymentMethod === 'banking'
+                                                                                ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                                : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                                            }`}>
+                                                                            {booking.paymentMethod === 'banking' ? 'BANKING' : 'TIỀN MẶT'}
+                                                                        </span>
+                                                                    )}
                                                                 </span>
                                                                 <span className="text-xs text-muted-foreground font-medium mt-0.5">
                                                                     {booking.fieldName}
@@ -190,7 +209,7 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
                                                         <div className="flex items-center justify-between pt-3 border-t">
                                                             <span className="text-sm font-bold text-green-700">{booking.amount}</span>
 
-                                                            {booking.status === 'pending' && onUpdateStatus && (
+                                                            {(booking.status === 'pending' || booking.status === 'PENDING') && onUpdateStatus && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
                                                                         <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1.5 hover:bg-green-50 hover:text-green-700 border-gray-200">

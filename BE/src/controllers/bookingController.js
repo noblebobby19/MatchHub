@@ -44,16 +44,15 @@ export const createBooking = async (req, res) => {
       fieldId,
       date,
       time,
-      status: { $in: ['confirmed', 'completed'] }
+      status: { $in: ['confirmed', 'CONFIRMED', 'completed'] }
     });
 
-    // Tuy nhiên, nếu user hiện tại đã đặt slot này rồi (đang chờ duyệt) thì báo đã đặt
     const myPendingBooking = await Booking.findOne({
       fieldId,
       date,
       time,
       userId: req.user._id,
-      status: 'pending'
+      status: { $in: ['pending', 'PENDING'] }
     });
 
     if (existingBooking) {
@@ -109,8 +108,8 @@ export const checkAvailability = async (req, res) => {
       fieldId,
       date,
       $or: [
-        { status: { $in: ['confirmed', 'completed'] } }, // Confirmed bookings are always blocked
-        ...(userId ? [{ status: 'pending', userId }] : []) // Own pending bookings are shown
+        { status: { $in: ['confirmed', 'CONFIRMED', 'completed'] } }, // Confirmed bookings are always blocked
+        ...(userId ? [{ status: { $in: ['pending', 'PENDING'] }, userId }] : []) // Own pending bookings are shown
       ]
     };
 
@@ -495,16 +494,24 @@ export const confirmPayment = async (req, res) => {
  */
 export const cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).populate('userId', 'name email');
+    const booking = await Booking.findById(req.params.id)
+      .populate('userId', 'name email phone')
+      .populate('fieldId');
+
     if (!booking) return res.status(404).json({ message: 'Booking không tồn tại' });
 
-    // Chỉ owner của booking mới được hủy
+    // Chỉ owner của booking hoặc chủ sân mới được hủy
     if (booking.userId._id.toString() !== req.user._id.toString() && req.user.role !== 'owner') {
       return res.status(403).json({ message: 'Bạn không có quyền hủy đơn này' });
     }
 
-    if (!['PENDING', 'CONFIRMED'].includes(booking.status)) {
+    if (!['PENDING', 'CONFIRMED', 'pending', 'confirmed'].includes(booking.status)) {
       return res.status(400).json({ message: `Không thể hủy đơn đang ở trạng thái ${booking.status}` });
+    }
+
+    // [MỚI] Chỉ cho phép hủy đơn Banking. Đơn Tiền mặt không được hủy từ phía User.
+    if (booking.paymentMethod === 'cash' && req.user.role !== 'owner') {
+      return res.status(403).json({ message: 'Đơn đặt sân thanh toán tiền mặt không thể hủy. Vui lòng liên hệ chủ sân.' });
     }
 
     // Kiểm tra 24h: booking.date + booking.time so với hiện tại
@@ -516,37 +523,69 @@ export const cancelBooking = async (req, res) => {
     const diffHours = diffMs / (1000 * 60 * 60);
 
     let newStatus;
-    let refundNote;
+    let isRefundable = false;
 
-    if (booking.paymentMethod === 'banking' && booking.status === 'CONFIRMED' && diffHours >= 24) {
-      newStatus = 'REFUND_PENDING';
-      refundNote = 'Hủy trước 24h – đủ điều kiện hoàn tiền cọc.';
-    } else if (booking.paymentMethod === 'banking' && booking.status === 'PENDING') {
-      // PENDING chưa xác nhận → hủy luôn, không hoàn (chưa mất tiền)
-      newStatus = 'CANCELLED';
-      refundNote = 'Hủy khi đang chờ xác nhận.';
+    // Chỉ áp dụng hoàn tiền cho confirmed banking
+    if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed')) {
+      if (diffHours >= 24) {
+        newStatus = 'REFUND_PENDING';
+        isRefundable = true;
+      } else {
+        newStatus = 'CANCELLED';
+        isRefundable = false;
+      }
     } else {
-      newStatus = 'CANCELLED';
-      refundNote = 'Hủy sau 24h hoặc thanh toán tiền mặt – không hoàn tiền.';
+      // Các trường hợp khác (Cash hoặc chưa Confirm) hủy là xong
+      newStatus = booking.paymentMethod === 'banking' ? 'CANCELLED' : 'cancelled';
     }
 
     booking.status = newStatus;
+    booking.cancelledAt = now;
     await booking.save();
 
-    // Notification
+    // Notification cho User
     try {
+      const userNotifTitle = isRefundable ? '💸 Đã hủy – Chờ hoàn tiền' : '❌ Đã hủy đặt sân';
+      const userNotifMsg = isRefundable
+        ? `Đơn ${booking.bookingCode} đã hủy trước 24h. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`
+        : (booking.paymentMethod === 'banking' && diffHours < 24)
+          ? `Đơn ${booking.bookingCode} đã hủy trễ hạn. Theo chính sách, bạn không được hoàn lại tiền cọc.`
+          : `Đơn đặt sân ${booking.fieldName} ngày ${booking.date} đã bị hủy.`;
+
       await Notification.create({
-        user: booking.userId._id || booking.userId,
-        title: newStatus === 'REFUND_PENDING' ? '💸 Yêu cầu hoàn tiền đã được ghi nhận' : '❌ Đặt sân đã hủy',
-        message: newStatus === 'REFUND_PENDING'
-          ? `Đơn ${booking.bookingCode} đã hủy. Chủ sân sẽ hoàn lại tiền cọc ${booking.depositAmount?.toLocaleString('vi-VN')}đ trong thời gian sớm nhất.`
-          : `Đơn đặt sân ${booking.fieldName} (${booking.date} - ${booking.time}) đã bị hủy.`,
-        type: 'warning',
+        user: booking.userId._id,
+        title: userNotifTitle,
+        message: userNotifMsg,
+        type: isRefundable ? 'warning' : 'error',
         link: `/chi-tiet-don-dat-san/${booking._id}`
       });
-    } catch (e) { console.error('Notification error:', e.message); }
+    } catch (e) { console.error('User Notification error:', e.message); }
 
-    res.json({ message: `Hủy đơn thành công. Trạng thái: ${newStatus}`, booking, refundNote });
+    // Notification cho Chủ Sân (Owner)
+    try {
+      const field = booking.fieldId;
+      if (field && field.ownerId) {
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+
+        const ownerMsg = `Đơn ${booking.bookingCode || booking._id} đã bị hủy lúc ${timeStr} ngày ${dateStr}.\n${isRefundable ? '✅ Đủ điều kiện hoàn tiền.' : '❌ Không hoàn tiền (hủy trễ hạn).'}`;
+
+        await Notification.create({
+          user: field.ownerId,
+          title: '📢 Khách vừa hủy đơn đặt sân',
+          message: ownerMsg,
+          type: 'info',
+          link: '/owner-dashboard'
+        });
+      }
+    } catch (e) { console.error('Owner Notification error:', e.message); }
+
+    res.json({
+      message: `Hủy đơn thành công.`,
+      status: newStatus,
+      isRefundable,
+      booking
+    });
   } catch (error) {
     console.error('❌ Error cancelling booking:', error);
     res.status(500).json({ message: error.message });
@@ -568,6 +607,7 @@ export const markRefunded = async (req, res) => {
     }
 
     booking.status = 'REFUNDED';
+    booking.refundedAt = new Date();
     await booking.save();
 
     // Notification
