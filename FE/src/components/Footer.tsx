@@ -21,7 +21,7 @@ export function Footer() {
               Hệ thống đặt lịch và quản lý sân bóng đá hàng đầu Việt Nam. Đặt sân dễ dàng, nhanh chóng và tiện lợi.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
+              <a href="https://www.facebook.com/share/17QwGQa2z5/" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
                 <Facebook className="h-4 w-4" />
               </a>
               <a href="#" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
