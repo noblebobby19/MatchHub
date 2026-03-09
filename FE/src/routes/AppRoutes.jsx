@@ -26,6 +26,10 @@ import { JoinRequestPage } from "../pages/JoinRequestPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { BankingPaymentPage } from "../pages/BankingPaymentPage";
 import { AuthProvider } from "../context/AuthContext";
+import { AboutUsPage } from "../pages/AboutUsPage";
+import { GuidePage } from "../pages/GuidePage";
+import { TermsPage } from "../pages/TermsPage";
+import { PrivacyPage } from "../pages/PrivacyPage";
 
 // Component để kiểm tra xem có nên hiển thị header/footer không
 function Layout({ children }) {
@@ -62,6 +66,10 @@ export function AppRoutes() {
             <Route path="/dang-ky" element={<RegisterPage />} />
             <Route path="/quen-mat-khau" element={<ForgotPasswordPage />} />
             <Route path="/thanh-toan" element={<CheckoutPage />} />
+            <Route path="/ve-chung-toi" element={<AboutUsPage />} />
+            <Route path="/huong-dan" element={<GuidePage />} />
+            <Route path="/dieu-khoan" element={<TermsPage />} />
+            <Route path="/bao-mat" element={<PrivacyPage />} />
 
             {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />

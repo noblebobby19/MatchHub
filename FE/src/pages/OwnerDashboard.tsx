@@ -82,13 +82,11 @@ interface Booking {
 export function OwnerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'bookings' | 'banking' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'bookings' | 'banking'>('overview');
   const [fields, setFields] = useState<Field[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [profile, setProfile] = useState({ name: '', email: '', phone: '' });
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [bankingPage, setBankingPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -102,14 +100,12 @@ export function OwnerDashboard() {
       setIsLoading(true);
       try {
         console.log('🔍 Fetching data for user:', user?.role, user?.email);
-        const [fieldsData, bookingsData, profileData] = await Promise.all([
+        const [fieldsData, bookingsData] = await Promise.all([
           apiService.getMyFields(),
-          apiService.getBookings(),
-          apiService.getProfile()
+          apiService.getBookings()
         ]);
         console.log('✅ Fields data received:', Array.isArray(fieldsData) ? fieldsData.length : 'not array', fieldsData);
         console.log('✅ Bookings data received:', Array.isArray(bookingsData) ? bookingsData.length : 'not array', bookingsData);
-        console.log('✅ Profile data:', profileData);
 
         // Đảm bảo fields và bookings là array
         const fieldsArray = Array.isArray(fieldsData) ? fieldsData : [];
@@ -119,11 +115,6 @@ export function OwnerDashboard() {
 
         setFields(fieldsArray);
         setBookings(bookingsArray);
-        setProfile({
-          name: profileData.name || '',
-          email: profileData.email || '',
-          phone: profileData.phone || ''
-        });
       } catch (error: any) {
         console.error('❌ Failed to fetch data:', error);
         console.error('Error details:', error.message, error.stack);
@@ -543,107 +534,6 @@ export function OwnerDashboard() {
           </div>
         );
 
-      case 'settings':
-        const handleUpdateProfile = async () => {
-          setIsSavingProfile(true);
-          try {
-            await apiService.updateProfile(profile);
-            toast.success('Cập nhật thông tin thành công!');
-            // Reload profile
-            const updatedProfile = await apiService.getProfile();
-            setProfile({
-              name: updatedProfile.name || '',
-              email: updatedProfile.email || '',
-              phone: updatedProfile.phone || ''
-            });
-          } catch (error: any) {
-            console.error('Failed to update profile:', error);
-            toast.error(error.message || 'Cập nhật thông tin thất bại');
-          } finally {
-            setIsSavingProfile(false);
-          }
-        };
-
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl">Cài đặt</h2>
-              <p className="text-muted-foreground">Quản lý thông tin tài khoản và cài đặt hệ thống</p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Thông tin tài khoản</CardTitle>
-                  <CardDescription>Cập nhật thông tin cá nhân</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm">Tên chủ sân</label>
-                    <Input
-                      value={profile.name}
-                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm">Email</label>
-                    <Input
-                      value={profile.email}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-xs text-muted-foreground">Email không thể thay đổi</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm">Số điện thoại</label>
-                    <Input
-                      placeholder="0123456789"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    />
-                  </div>
-                  <Button
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={handleUpdateProfile}
-                    disabled={isSavingProfile}
-                  >
-                    {isSavingProfile ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Đang lưu...
-                      </>
-                    ) : (
-                      'Cập nhật thông tin'
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Đổi mật khẩu</CardTitle>
-                  <CardDescription>Thay đổi mật khẩu tài khoản</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm">Mật khẩu hiện tại</label>
-                    <Input type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm">Mật khẩu mới</label>
-                    <Input type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm">Xác nhận mật khẩu mới</label>
-                    <Input type="password" />
-                  </div>
-                  <Button className="bg-green-600 hover:bg-green-700">Đổi mật khẩu</Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
-
       case 'banking': {
         if (isLoading) {
           return (
@@ -922,14 +812,6 @@ export function OwnerDashboard() {
                   {bookings.filter((b: any) => b.paymentMethod === 'banking' && b.status === 'PENDING').length}
                 </span>
               )}
-            </Button>
-            <Button
-              variant={activeTab === 'settings' ? 'default' : 'ghost'}
-              className={`w-full justify-start ${activeTab === 'settings' ? 'bg-green-600 hover:bg-green-700' : ''}`}
-              onClick={() => setActiveTab('settings')}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Cài đặt
             </Button>
           </nav>
         </aside>

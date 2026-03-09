@@ -1,4 +1,5 @@
-import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Footer() {
   return (
@@ -21,18 +22,6 @@ export function Footer() {
               Hệ thống đặt lịch và quản lý sân bóng đá hàng đầu Việt Nam. Đặt sân dễ dàng, nhanh chóng và tiện lợi.
             </p>
             <div className="flex gap-3">
-              <a href="https://www.facebook.com/share/17QwGQa2z5/" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
-                <Facebook className="h-4 w-4" />
-              </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
-                <Instagram className="h-4 w-4" />
-              </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
-                <Twitter className="h-4 w-4" />
-              </a>
-              <a href="#" className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors">
-                <Youtube className="h-4 w-4" />
-              </a>
             </div>
           </div>
 
@@ -40,10 +29,10 @@ export function Footer() {
           <div>
             <h4 className="text-white mb-4">Liên kết nhanh</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-green-400 transition-colors">Trang chủ</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Tìm sân</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Về chúng tôi</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Liên hệ</a></li>
+              <li><Link to="/" className="hover:text-green-400 transition-colors">Trang chủ</Link></li>
+              <li><Link to="/ve-chung-toi" className="hover:text-green-400 transition-colors">Về chúng tôi</Link></li>
+              <li><Link to="/lien-he" className="hover:text-green-400 transition-colors">Liên hệ</Link></li>
+              <li><a href="https://www.facebook.com/share/17QwGQa2z5/" target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors">Facebook</a></li>
             </ul>
           </div>
 
@@ -51,8 +40,9 @@ export function Footer() {
           <div>
             <h4 className="text-white mb-4">Hỗ trợ</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-green-400 transition-colors">Câu hỏi thường gặp</a></li>
-              <li><a href="#" className="hover:text-green-400 transition-colors">Hướng dẫn đặt sân</a></li>
+              <li><Link to="/huong-dan" className="hover:text-green-400 transition-colors">Hướng dẫn đặt sân</Link></li>
+              <li><Link to="/dieu-khoan" className="hover:text-green-400 transition-colors">Điều khoản</Link></li>
+              <li><Link to="/bao-mat" className="hover:text-green-400 transition-colors">Bảo mật</Link></li>
             </ul>
           </div>
 
@@ -77,12 +67,8 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-800 pt-8 mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
-          <p>&copy; 2025 MatchHub. All rights reserved.</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-green-400 transition-colors">Điều khoản</a>
-            <a href="#" className="hover:text-green-400 transition-colors">Bảo mật</a>
-          </div>
+        <div className="border-t border-gray-800 pt-8 mt-8 flex flex-col sm:flex-row justify-center items-center gap-4 text-sm">
+          <p>&copy; 2026 MatchHub. All rights reserved.</p>
         </div>
       </div>
     </footer>
