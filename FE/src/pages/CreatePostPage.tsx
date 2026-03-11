@@ -118,7 +118,7 @@ export function CreatePostPage() {
                             <div className="space-y-2">
                                 <Label>Tên đội / Nhóm</Label>
                                 <Input
-                                    required
+                                    required={false}
                                     placeholder="Ví dụ: FC Rồng Lửa"
                                     value={formData.teamName}
                                     onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
@@ -129,7 +129,7 @@ export function CreatePostPage() {
                                 <div className="space-y-2">
                                     <Label>Sân bóng (Dự kiến)</Label>
                                     <Input
-                                        required
+                                        required={false}
                                         placeholder="Ví dụ: Sân Xuân Khánh"
                                         value={formData.fieldName}
                                         onChange={(e) => setFormData({ ...formData, fieldName: e.target.value })}
@@ -138,7 +138,7 @@ export function CreatePostPage() {
                                 <div className="space-y-2">
                                     <Label>Địa chỉ sân</Label>
                                     <Input
-                                        required
+                                        required={false}
                                         placeholder="Quận/Huyện"
                                         value={formData.location}
                                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -150,7 +150,7 @@ export function CreatePostPage() {
                                 <div className="space-y-2">
                                     <Label>Ngày đá</Label>
                                     <Input
-                                        required
+                                        required={false}
                                         type="date"
                                         value={formData.date}
                                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -159,7 +159,7 @@ export function CreatePostPage() {
                                 <div className="space-y-2">
                                     <Label>Giờ đá</Label>
                                     <Input
-                                        required
+                                        required={false}
                                         type="time" // Simple text for range like "18:00 - 19:00" or just time input
                                         placeholder="18:00 - 19:30"
                                         value={formData.time}
@@ -174,7 +174,7 @@ export function CreatePostPage() {
                                     <div className="space-y-2">
                                         <Label>Đội hiện có (người)</Label>
                                         <Input
-                                            required
+                                            required={false}
                                             type="number"
                                             min={1}
                                             value={formData.currentPlayers}
@@ -184,7 +184,7 @@ export function CreatePostPage() {
                                     <div className="space-y-2">
                                         <Label>Cần thêm (người)</Label>
                                         <Input
-                                            required
+                                            required={false}
                                             type="number"
                                             min={1}
                                             value={formData.neededPlayers}
@@ -198,7 +198,7 @@ export function CreatePostPage() {
                                     <div className="space-y-2">
                                         <Label>Số lượng người (Phe mình)</Label>
                                         <Input
-                                            required
+                                            required={false}
                                             type="number"
                                             min={1}
                                             value={formData.currentPlayers}

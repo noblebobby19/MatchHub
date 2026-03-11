@@ -7,10 +7,52 @@ export const register = async (req, res) => {
   try {
     const { name, email, password, role, address } = req.body;
 
+    // --- BE Validation ---
+    // 1. HỌ VÀ TÊN
+    if (!name) return res.status(400).json({ message: 'Họ và tên không được để trống' });
+    if (name.startsWith(' ') || name.endsWith(' ')) return res.status(400).json({ message: 'Họ và tên không được có khoảng trắng ở đầu hoặc cuối' });
+    if (name.length < 5) return res.status(400).json({ message: 'Họ và tên phải có ít nhất 5 ký tự' });
+    if (name.length > 100) return res.status(400).json({ message: 'Họ và tên không được vượt quá 100 ký tự' });
+    if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(name)) return res.status(400).json({ message: 'Họ và tên không được chứa số hoặc ký tự đặc biệt' });
+    if (/\s{2,}/.test(name)) return res.status(400).json({ message: 'Họ và tên không được có khoảng trắng liên tiếp' });
+
+    // 2. EMAIL
+    if (!email) return res.status(400).json({ message: 'Email không được để trống' });
+    if (email.length > 254) return res.status(400).json({ message: 'Email không được vượt quá 254 ký tự' });
+    if (email.includes(' ')) return res.status(400).json({ message: 'Email không được chứa khoảng trắng' });
+    const emailParts = email.split('@');
+    if (emailParts.length !== 2) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+    const [localPart, domainPart] = emailParts;
+    if (!localPart || !domainPart) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+    if (localPart.startsWith('.') || localPart.endsWith('.')) return res.status(400).json({ message: 'Phần tên email không được bắt đầu hoặc kết thúc bằng dấu chấm' });
+    if (localPart.includes('..')) return res.status(400).json({ message: 'Phần tên email không được có dấu chấm liên tiếp' });
+    if (domainPart.startsWith('.') || domainPart.endsWith('.')) return res.status(400).json({ message: 'Tên miền không được bắt đầu hoặc kết thúc bằng dấu chấm' });
+    if (domainPart.includes('..')) return res.status(400).json({ message: 'Tên miền không được có dấu chấm liên tiếp' });
+    if (!/^[a-zA-Z0-9.-]+$/.test(domainPart) || /[^a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]/.test(localPart)) return res.status(400).json({ message: 'Email chứa ký tự không hợp lệ' });
+    if (!domainPart.includes('.')) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+
+    // 3. ĐỊA CHỈ
+    if (!address) return res.status(400).json({ message: 'Địa chỉ không được để trống' });
+    if (address.trim().length < 10) return res.status(400).json({ message: 'Địa chỉ phải có ít nhất 10 ký tự' });
+    if (address.length > 200) return res.status(400).json({ message: 'Địa chỉ không được vượt quá 200 ký tự' });
+    if (/\s{2,}/.test(address)) return res.status(400).json({ message: 'Địa chỉ có quá nhiều khoảng trắng liên tiếp' });
+    if (/[!@#$%^&*_=+|<>?]/.test(address)) return res.status(400).json({ message: 'Địa chỉ chứa ký tự không hợp lệ' });
+
+    // 4. MẬT KHẨU
+    if (!password) return res.status(400).json({ message: 'Mật khẩu không được để trống' });
+    if (password.includes(' ')) return res.status(400).json({ message: 'Mật khẩu không được chứa khoảng trắng' });
+    if (password.length < 8) return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 8 ký tự' });
+    if (password.length > 128) return res.status(400).json({ message: 'Mật khẩu không được vượt quá 128 ký tự' });
+    if (!/[A-Z]/.test(password)) return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 1 chữ cái in hoa' });
+    if (!/[a-z]/.test(password)) return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 1 chữ cái thường' });
+    if (!/[0-9]/.test(password)) return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 1 chữ số' });
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#$%^&*...)' });
+
+
     // Kiểm tra user đã tồn tại trong database chưa
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email này đã được đăng ký tài khoản.' });
+      return res.status(400).json({ message: 'Email đã tồn tại' });
     }
 
     // Tạo user mới và lưu vào database
@@ -50,6 +92,23 @@ export const login = async (req, res) => {
     const { email, password, role } = req.body;
 
     console.log('Login attempt:', { email, role });
+
+    // --- BE Validation ---
+    if (!email) return res.status(400).json({ message: 'Email không được để trống' });
+    if (email.length > 254) return res.status(400).json({ message: 'Email không được vượt quá 254 ký tự' });
+    if (email.includes(' ')) return res.status(400).json({ message: 'Email không được chứa khoảng trắng' });
+    const emailParts = email.split('@');
+    if (emailParts.length !== 2) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+    const [localPart, domainPart] = emailParts;
+    if (!localPart || !domainPart) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+    if (localPart.startsWith('.') || localPart.endsWith('.')) return res.status(400).json({ message: 'Phần tên email không được bắt đầu hoặc kết thúc bằng dấu chấm' });
+    if (localPart.includes('..')) return res.status(400).json({ message: 'Phần tên email không được có dấu chấm liên tiếp' });
+    if (domainPart.startsWith('.') || domainPart.endsWith('.')) return res.status(400).json({ message: 'Tên miền không được bắt đầu hoặc kết thúc bằng dấu chấm' });
+    if (domainPart.includes('..')) return res.status(400).json({ message: 'Tên miền không được có dấu chấm liên tiếp' });
+    if (!/^[a-zA-Z0-9.-]+$/.test(domainPart) || /[^a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]/.test(localPart)) return res.status(400).json({ message: 'Email chứa ký tự không hợp lệ' });
+    if (!domainPart.includes('.')) return res.status(400).json({ message: 'Email không đúng định dạng (ví dụ: ten@email.com)' });
+
+    if (!password) return res.status(400).json({ message: 'Mật khẩu không được để trống' });
 
     // Tìm user trong database
     const user = await User.findOne({ email });

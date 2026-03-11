@@ -28,6 +28,13 @@ export function CheckoutPage() {
     note: ""
   });
 
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    note: ""
+  });
+
   // Lấy dữ liệu từ navigation state
   const bookingData = location.state as {
     fieldId: string;
@@ -62,7 +69,74 @@ export function CheckoutPage() {
 
   const { field, timeSlot, date } = bookingData;
 
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {
+      name: "",
+      email: "",
+      phone: "",
+      note: ""
+    };
+
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Họ và tên không được để trống";
+      isValid = false;
+    } else if (formData.name.trim().length < 2 || formData.name.trim().length > 50) {
+      newErrors.name = "Họ và tên phải từ 2 đến 50 ký tự";
+      isValid = false;
+    } else if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/.test(formData.name)) {
+      newErrors.name = "Họ và tên chỉ được chứa chữ cái và khoảng trắng";
+      isValid = false;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      newErrors.email = "Email không được để trống";
+      isValid = false;
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Email không đúng định dạng";
+      isValid = false;
+    }
+
+    // Phone validation
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Số điện thoại không được để trống";
+      isValid = false;
+    } else if (!/^\d+$/.test(formData.phone)) {
+      newErrors.phone = "Số điện thoại chỉ được chứa số";
+      isValid = false;
+    } else if (!formData.phone.startsWith("0")) {
+      newErrors.phone = "Số điện thoại phải bắt đầu bằng 0";
+      isValid = false;
+    } else if (formData.phone.length < 10 || formData.phone.length > 11) {
+      newErrors.phone = "Số điện thoại phải có 10-11 số";
+      isValid = false;
+    }
+
+    // Note validation
+    if (formData.note) {
+      if (formData.note.length > 200) {
+        newErrors.note = "Ghi chú không được vượt quá 200 ký tự";
+        isValid = false;
+      }
+      if (/<[^>]*>?/gm.test(formData.note) || formData.note.toLowerCase().includes('script')) {
+        newErrors.note = "Ghi chú không cho phép chứa script hoặc HTML";
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleConfirm = async () => {
+    if (!validateForm()) {
+      toast.error("Vui lòng kiểm tra lại thông tin khách hàng");
+      return;
+    }
+
     if (paymentMethod === "cash") {
       // Thanh toán tiền mặt - gọi API trực tiếp
       setIsProcessing(true);
@@ -76,13 +150,6 @@ export function CheckoutPage() {
           setTimeout(() => {
             navigate('/dang-nhap');
           }, 1000);
-          return;
-        }
-
-        // Validate form data
-        if (!formData.name || !formData.email || !formData.phone) {
-          toast.error("Vui lòng điền đầy đủ thông tin khách hàng");
-          setIsProcessing(false);
           return;
         }
 
@@ -144,12 +211,6 @@ export function CheckoutPage() {
           toast.error("Bạn cần đăng nhập để thanh toán.");
           setIsProcessing(false);
           navigate('/dang-nhap');
-          return;
-        }
-
-        if (!formData.name || !formData.email || !formData.phone) {
-          toast.error("Vui lòng điền đầy đủ thông tin khách hàng");
-          setIsProcessing(false);
           return;
         }
 
@@ -296,10 +357,14 @@ export function CheckoutPage() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="mt-1"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, name: e.target.value }));
+                        if (errors.name) setErrors(prev => ({ ...prev, name: "" }));
+                      }}
+                      className={`mt-1 ${errors.name ? 'border-red-500' : ''}`}
                       required
                     />
+                    {errors.name && <p className="text-sm text-red-500 mt-1" style={{ color: '#ef4444' }}>{errors.name}</p>}
                   </div>
                   <div>
                     <Label htmlFor="email">Email *</Label>
@@ -307,10 +372,14 @@ export function CheckoutPage() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="mt-1"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, email: e.target.value }));
+                        if (errors.email) setErrors(prev => ({ ...prev, email: "" }));
+                      }}
+                      className={`mt-1 ${errors.email ? 'border-red-500' : ''}`}
                       required
                     />
+                    {errors.email && <p className="text-sm text-red-500 mt-1" style={{ color: '#ef4444' }}>{errors.email}</p>}
                   </div>
                   <div>
                     <Label htmlFor="phone">Số điện thoại *</Label>
@@ -318,10 +387,14 @@ export function CheckoutPage() {
                       id="phone"
                       placeholder="Nhập số điện thoại"
                       value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      className="mt-1"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, phone: e.target.value }));
+                        if (errors.phone) setErrors(prev => ({ ...prev, phone: "" }));
+                      }}
+                      className={`mt-1 ${errors.phone ? 'border-red-500' : ''}`}
                       required
                     />
+                    {errors.phone && <p className="text-sm text-red-500 mt-1" style={{ color: '#ef4444' }}>{errors.phone}</p>}
                   </div>
                   <div>
                     <Label htmlFor="note">Ghi chú</Label>
@@ -329,10 +402,14 @@ export function CheckoutPage() {
                       id="note"
                       placeholder="Nhập ghi chú (nếu có)"
                       value={formData.note}
-                      onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
-                      className="mt-1 min-h-[100px]"
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, note: e.target.value }));
+                        if (errors.note) setErrors(prev => ({ ...prev, note: "" }));
+                      }}
+                      className={`mt-1 min-h-[100px] ${errors.note ? 'border-red-500' : ''}`}
                       rows={4}
                     />
+                    {errors.note && <p className="text-sm text-red-500 mt-1" style={{ color: '#ef4444' }}>{errors.note}</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -366,7 +443,7 @@ export function CheckoutPage() {
                       className="w-full bg-green-600 hover:bg-green-700"
                       size="lg"
                       onClick={handleConfirm}
-                      disabled={isProcessing || !formData.name || !formData.email || !formData.phone}
+                      disabled={isProcessing}
                     >
                       {isProcessing ? "Đang xử lý..." : "Xác nhận thanh toán"}
                     </Button>

@@ -18,6 +18,7 @@ export function ContactPage() {
   });
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState({ subject: '', message: '' });
 
   // Check auth on mount
   useEffect(() => {
@@ -27,9 +28,60 @@ export function ContactPage() {
     }
   }, [user, navigate]);
 
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { subject: '', message: '' };
+
+    if (!formData.subject.trim()) {
+      newErrors.subject = 'Chủ đề không được để trống';
+      isValid = false;
+    } else if (formData.subject.trim().length < 5) {
+      newErrors.subject = 'Chủ đề phải có ít nhất 5 ký tự';
+      isValid = false;
+    } else if (formData.subject.trim().length > 100) {
+      newErrors.subject = 'Chủ đề không được vượt quá 100 ký tự';
+      isValid = false;
+    }
+
+    if (!formData.message.trim()) {
+      newErrors.message = 'Nội dung không được để trống';
+      isValid = false;
+    } else if (formData.message.trim().length < 10) {
+      newErrors.message = 'Nội dung phải có ít nhất 10 ký tự';
+      isValid = false;
+    } else if (formData.message.trim().length > 1000) {
+      newErrors.message = 'Nội dung không được vượt quá 1000 ký tự';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const checkRateLimit = () => {
+    if (!user) return true;
+    const lastSentDate = localStorage.getItem(`contact_sent_${user.id}`);
+    if (lastSentDate) {
+      const today = new Date().toDateString();
+      if (lastSentDate === today) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!checkRateLimit()) {
+      alert("Bạn đã gửi một tin nhắn trong hôm nay rồi. Vui lòng quay lại vào ngày mai để gửi tiếp.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -39,6 +91,7 @@ export function ContactPage() {
       });
       setShowSuccess(true);
       setFormData({ subject: '', message: '' });
+      localStorage.setItem(`contact_sent_${user.id}`, new Date().toDateString());
     } catch (error: any) {
       alert(error.message || 'Có lỗi xảy ra khi gửi tin nhắn');
     } finally {
@@ -99,14 +152,19 @@ export function ContactPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="subject">Chủ đề</Label>
+                      <Label htmlFor="subject">Chủ đề *</Label>
                       <Input
                         id="subject"
                         placeholder="Tiêu đề tin nhắn"
                         value={formData.subject}
-                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, subject: e.target.value });
+                          if (errors.subject) setErrors({ ...errors, subject: '' });
+                        }}
+                        className={errors.subject ? 'border-red-500' : ''}
                         required
                       />
+                      {errors.subject && <p className="text-sm mt-1" style={{ color: '#ef4444' }}>{errors.subject}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -116,9 +174,14 @@ export function ContactPage() {
                         placeholder="Nhập nội dung tin nhắn của bạn..."
                         rows={6}
                         value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, message: e.target.value });
+                          if (errors.message) setErrors({ ...errors, message: '' });
+                        }}
+                        className={errors.message ? 'border-red-500' : ''}
                         required
                       />
+                      {errors.message && <p className="text-sm mt-1" style={{ color: '#ef4444' }}>{errors.message}</p>}
                     </div>
 
                     <Button

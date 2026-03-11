@@ -113,7 +113,7 @@ export function ProfilePage() {
                     className="pl-10"
                     value={profile.name}
                     onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    required
+                    required={false}
                   />
                 </div>
               </div>

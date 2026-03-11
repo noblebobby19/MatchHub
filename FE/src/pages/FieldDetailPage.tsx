@@ -366,7 +366,7 @@ export function FieldDetailPage() {
                     size="lg"
                     onClick={() => {
                       // Nếu chưa chọn khung giờ, chuyển sang tab schedule và scroll
-                      if (!selectedTimeSlot || !selectedTimeSlot.available) {
+                      if (!selectedTimeSlot) {
                         setActiveTab("schedule");
                         // Scroll đến phần schedule sau một chút để tab chuyển xong
                         setTimeout(() => {

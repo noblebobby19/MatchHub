@@ -16,9 +16,40 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [errors, setErrors] = useState<any>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const newErrors: any = {};
+    if (!email) {
+      newErrors.email = 'Email không được để trống';
+    } else {
+      const emailParts = email.split('@');
+      if (emailParts.length !== 2) {
+        newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+      } else {
+        const [localPart, domainPart] = emailParts;
+        if (!localPart || !domainPart) newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+        else if (localPart.startsWith('.') || localPart.endsWith('.')) newErrors.email = 'Phần tên email không được bắt đầu hoặc kết thúc bằng dấu chấm';
+        else if (localPart.includes('..')) newErrors.email = 'Phần tên email không được có dấu chấm liên tiếp';
+        else if (domainPart.startsWith('.') || domainPart.endsWith('.')) newErrors.email = 'Tên miền không được bắt đầu hoặc kết thúc bằng dấu chấm';
+        else if (domainPart.includes('..')) newErrors.email = 'Tên miền không được có dấu chấm liên tiếp';
+        else if (!/^[a-zA-Z0-9.-]+$/.test(domainPart) || /[^a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]/.test(localPart)) newErrors.email = 'Email chứa ký tự không hợp lệ';
+        else if (!domainPart.includes('.')) newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+      }
+    }
+
+    if (!password) {
+      newErrors.password = 'Mật khẩu không được để trống';
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
     setIsLoading(true);
     setShowErrorAlert(false);
 
@@ -83,33 +114,47 @@ export function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className={errors.email ? "text-[#ef4444]" : ""}>Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${errors.email ? "text-[#ef4444]" : "text-muted-foreground"}`} />
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     placeholder="abc123@email.com"
-                    className="pl-10"
+                    className={`pl-10 ${errors.email ? "border-[#ef4444] focus-visible:ring-[#ef4444]" : ""}`}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors({ ...errors, email: '' });
+                    }}
+                    required={false}
+                    aria-invalid={errors.email ? "true" : "false"}
                   />
                 </div>
+                {errors.email && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[#ef4444]">
+                    <XCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium" style={{ color: '#ef4444' }}>{errors.email}</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu</Label>
-                <div className="flex items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-                  <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="password" className={errors.password ? "text-[#ef4444]" : ""}>Mật khẩu</Label>
+                <div style={errors.password ? { borderColor: '#ef4444' } : {}} className={`flex items-center rounded-md border bg-background px-3 focus-within:ring-2 ${errors.password ? "border-[#ef4444] focus-within:ring-[#ef4444]" : "focus-within:ring-ring"}`}>
+                  <Lock className={`mr-2 h-4 w-4 ${errors.password ? "text-[#ef4444]" : "text-muted-foreground"}`} />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     className="border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors({ ...errors, password: '' });
+                    }}
+                    required={false}
+                    aria-invalid={errors.password ? "true" : "false"}
                   />
                   <button
                     type="button"
@@ -119,6 +164,12 @@ export function LoginPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {errors.password && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[#ef4444]">
+                    <XCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium" style={{ color: '#ef4444' }}>{errors.password}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between">

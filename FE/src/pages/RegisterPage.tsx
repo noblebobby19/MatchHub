@@ -20,15 +20,108 @@ export function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    // 1. HỌ VÀ TÊN
+    const nameStr = name;
+    if (!nameStr) {
+      newErrors.name = 'Họ và tên không được để trống';
+    } else if (nameStr.startsWith(' ') || nameStr.endsWith(' ')) {
+      newErrors.name = 'Họ và tên không được có khoảng trắng ở đầu hoặc cuối';
+    } else if (nameStr.length < 5) {
+      newErrors.name = 'Họ và tên phải có ít nhất 5 ký tự';
+    } else if (nameStr.length > 100) {
+      newErrors.name = 'Họ và tên không được vượt quá 100 ký tự';
+    } else if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(nameStr)) {
+      newErrors.name = 'Họ và tên không được chứa số hoặc ký tự đặc biệt';
+    } else if (/\s{2,}/.test(nameStr)) {
+      newErrors.name = 'Họ và tên không được có khoảng trắng liên tiếp';
+    }
+
+    // 2. EMAIL
+    const emailStr = email;
+    if (!emailStr) {
+      newErrors.email = 'Email không được để trống';
+    } else if (emailStr.length > 254) {
+      newErrors.email = 'Email không được vượt quá 254 ký tự';
+    } else if (emailStr.includes(' ')) {
+      newErrors.email = 'Email không được chứa khoảng trắng';
+    } else {
+      const emailParts = emailStr.split('@');
+      if (emailParts.length !== 2) {
+        newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+      } else {
+        const [localPart, domainPart] = emailParts;
+        if (!localPart || !domainPart) {
+           newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+        } else if (localPart.startsWith('.') || localPart.endsWith('.')) {
+          newErrors.email = 'Phần tên email không được bắt đầu hoặc kết thúc bằng dấu chấm';
+        } else if (localPart.includes('..')) {
+          newErrors.email = 'Phần tên email không được có dấu chấm liên tiếp';
+        } else if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+          newErrors.email = 'Tên miền không được bắt đầu hoặc kết thúc bằng dấu chấm';
+        } else if (domainPart.includes('..')) {
+          newErrors.email = 'Tên miền không được có dấu chấm liên tiếp';
+        } else if (!/^[a-zA-Z0-9.-]+$/.test(domainPart) || /[^a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]/.test(localPart)) {
+          newErrors.email = 'Email chứa ký tự không hợp lệ';
+        } else if (!domainPart.includes('.')) {
+          newErrors.email = 'Email không đúng định dạng (ví dụ: ten@email.com)';
+        }
+      }
+    }
+
+    // 3. ĐỊA CHỈ
+    const addressStr = address;
+    if (!addressStr) {
+      newErrors.address = 'Địa chỉ không được để trống';
+    } else if (addressStr.trim().length < 10) {
+      newErrors.address = 'Địa chỉ phải có ít nhất 10 ký tự';
+    } else if (addressStr.length > 200) {
+      newErrors.address = 'Địa chỉ không được vượt quá 200 ký tự';
+    } else if (/\s{2,}/.test(addressStr)) {
+      newErrors.address = 'Địa chỉ có quá nhiều khoảng trắng liên tiếp';
+    } else if (/[!@#$%^&*_=+|<>?]/.test(addressStr)) {
+      newErrors.address = 'Địa chỉ chứa ký tự không hợp lệ';
+    }
+
+    // 4. MẬT KHẨU
+    const passStr = password;
+    if (!passStr) {
+      newErrors.password = 'Mật khẩu không được để trống';
+    } else if (passStr.includes(' ')) {
+      newErrors.password = 'Mật khẩu không được chứa khoảng trắng';
+    } else if (passStr.length < 8) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+    } else if (passStr.length > 128) {
+      newErrors.password = 'Mật khẩu không được vượt quá 128 ký tự';
+    } else if (!/[A-Z]/.test(passStr)) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 1 chữ cái in hoa';
+    } else if (!/[a-z]/.test(passStr)) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 1 chữ cái thường';
+    } else if (!/[0-9]/.test(passStr)) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 1 chữ số';
+    } else if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(passStr)) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#$%^&*...)';
+    }
+
+    // 5. XÁC NHẬN MẬT KHẨU
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      setErrorMessage('Mật khẩu không khớp!');
-      setShowErrorAlert(true);
-      setShowSuccessAlert(false);
+    if (!validateForm()) {
       return;
     }
 
@@ -114,65 +207,87 @@ export function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Họ và tên</Label>
+                <Label htmlFor="name" className={errors.name ? "text-red-500" : ""}>Họ và tên</Label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <UserIcon className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${errors.name ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <Input
                     id="name"
                     type="text"
                     placeholder="Nguyễn Văn A"
-                    className="pl-10"
+                    className={`pl-10 ${errors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    aria-invalid={!!errors.name}
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (errors.name) {
+                        setErrors(prev => ({ ...prev, name: '' }));
+                      }
+                    }}
                   />
                 </div>
+                {errors.name && <p className="text-sm font-medium text-red-500 mt-1 flex items-center" style={{ color: '#ef4444' }}><XCircle className="h-4 w-4 mr-1" color="#ef4444" />{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className={errors.email ? "text-red-500" : ""}>Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${errors.email ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <Input
                     id="email"
-                    type="email"
+                    type="text"
                     placeholder="abc123@email.com"
-                    className="pl-10"
+                    className={`pl-10 ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    aria-invalid={!!errors.email}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) {
+                        setErrors(prev => ({ ...prev, email: '' }));
+                      }
+                    }}
                   />
                 </div>
+                {errors.email && <p className="text-sm font-medium text-red-500 mt-1 flex items-center" style={{ color: '#ef4444' }}><XCircle className="h-4 w-4 mr-1" color="#ef4444" />{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Địa chỉ</Label>
+                <Label htmlFor="address" className={errors.address ? "text-red-500" : ""}>Địa chỉ</Label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${errors.address ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <Input
                     id="address"
                     type="text"
                     placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                    className="pl-10"
+                    className={`pl-10 ${errors.address ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    aria-invalid={!!errors.address}
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (errors.address) {
+                        setErrors(prev => ({ ...prev, address: '' }));
+                      }
+                    }}
                   />
                 </div>
+                {errors.address && <p className="text-sm font-medium text-red-500 mt-1 flex items-center" style={{ color: '#ef4444' }}><XCircle className="h-4 w-4 mr-1" color="#ef4444" />{errors.address}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu</Label>
-                <div className="flex items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-                  <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="password" className={errors.password ? "text-red-500" : ""}>Mật khẩu</Label>
+                <div className={`flex items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring ${errors.password ? 'border-red-500 focus-within:ring-red-500' : ''}`}>
+                  <Lock className={`mr-2 h-4 w-4 ${errors.password ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     className="border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) {
+                        setErrors(prev => ({ ...prev, password: '' }));
+                      }
+                    }}
                   />
                   <button
                     type="button"
@@ -182,20 +297,25 @@ export function RegisterPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {errors.password && <p className="text-sm font-medium text-red-500 mt-1 flex items-start" style={{ color: '#ef4444' }}><XCircle className="h-4 w-4 mr-1 mt-0.5 shrink-0" color="#ef4444" /><span>{errors.password}</span></p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Xác nhận mật khẩu</Label>
-                <div className="flex items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-                  <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="confirm-password" className={errors.confirmPassword ? "text-red-500" : ""}>Xác nhận mật khẩu</Label>
+                <div className={`flex items-center rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring ${errors.confirmPassword ? 'border-red-500 focus-within:ring-red-500' : ''}`}>
+                  <Lock className={`mr-2 h-4 w-4 ${errors.confirmPassword ? 'text-red-500' : 'text-muted-foreground'}`} />
                   <Input
                     id="confirm-password"
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     className="border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirmPassword) {
+                         setErrors(prev => ({ ...prev, confirmPassword: '' }));
+                      }
+                    }}
                   />
                   <button
                     type="button"
@@ -205,6 +325,7 @@ export function RegisterPage() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {errors.confirmPassword && <p className="text-sm font-medium text-red-500 mt-1 flex items-start" style={{ color: '#ef4444' }}><XCircle className="h-4 w-4 mr-1 mt-0.5 shrink-0" color="#ef4444" /><span>{errors.confirmPassword}</span></p>}
               </div>
 
               <div className="text-sm text-muted-foreground">
