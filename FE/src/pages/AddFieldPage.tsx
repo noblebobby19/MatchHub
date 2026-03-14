@@ -52,6 +52,107 @@ export function AddFieldPage() {
   });
   const [featureInput, setFeatureInput] = useState('');
 
+  // Parse openTime thành start/end hours
+  const parseOpenTime = (openTime: string) => {
+    const match = openTime.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if (match) {
+      return { start: match[1].padStart(2, '0'), end: match[3].padStart(2, '0') };
+    }
+    return { start: '05', end: '23' };
+  };
+
+  const parsedTime = parseOpenTime(newField.openTime);
+  const [openTimeStart, setOpenTimeStart] = useState(parsedTime.start);
+  const [openTimeEnd, setOpenTimeEnd] = useState(parsedTime.end);
+
+  // Tạo danh sách giờ từ 00 đến 23
+  const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+
+  const handleOpenTimeChange = (start: string, end: string) => {
+    setOpenTimeStart(start);
+    setOpenTimeEnd(end);
+    const newOpenTime = `${start}:00 - ${end}:00`;
+    setNewField(prev => {
+      // Tự động sinh lại timeSlots khi đổi giờ (giữ nguyên giá của các slot cũ nếu trùng giờ)
+      const newSlots = generateTimeSlots(newOpenTime, prev.price);
+      const mergedSlots = newSlots.map(newSlot => {
+        const existingSlot = prev.timeSlots.find(s => s.time === newSlot.time);
+        return existingSlot ? { ...newSlot, price: existingSlot.price } : newSlot;
+      });
+      return { ...prev, openTime: newOpenTime, timeSlots: mergedSlots };
+    });
+  };
+
+  const handlePriceChange = (newPrice: string) => {
+    setNewField(prev => {
+      // Khi đổi giá gốc, cập nhật lại giá cho các timeSlots chưa bị sửa tay (đang bằng giá cũ)
+      const oldFormattedPrice = formatPrice(prev.price);
+      const newFormattedPrice = formatPrice(newPrice);
+      
+      const updatedSlots = prev.timeSlots.map(slot => {
+        if (slot.price === oldFormattedPrice || !slot.price) {
+          return { ...slot, price: newFormattedPrice };
+        }
+        return slot; // Giữ nguyên giá nếu chủ sân đã từng sửa tay khác với giá gốc
+      });
+
+      // Nếu chưa có slot nào, sinh mới
+      const finalSlots = updatedSlots.length > 0 ? updatedSlots : generateTimeSlots(prev.openTime, newPrice);
+
+      return { ...prev, price: newPrice, timeSlots: finalSlots };
+    });
+  };
+
+  const handleTimeSlotPriceChange = (index: number, newPrice: string) => {
+    setNewField(prev => {
+      const updatedSlots = [...prev.timeSlots];
+      updatedSlots[index] = { ...updatedSlots[index], price: newPrice };
+      return { ...prev, timeSlots: updatedSlots };
+    });
+  };
+
+  const formatPrice = (priceStr: string) => {
+    let formattedPrice = priceStr || '200.000đ';
+    const numericPrice = parseInt(String(priceStr).replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(numericPrice) && numericPrice > 0) {
+      formattedPrice = numericPrice.toLocaleString('vi-VN') + 'đ';
+    }
+    return formattedPrice;
+  };
+
+  const generateTimeSlots = (openTime: string, defaultPrice: string) => {
+    const match = openTime.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if (!match) return [];
+
+    const startHour = parseInt(match[1], 10);
+    const endHour = parseInt(match[3], 10);
+    const startTotal = startHour * 60;
+    const endTotal = endHour * 60;
+
+    if (endTotal <= startTotal) return [];
+
+    const formattedPrice = formatPrice(defaultPrice);
+    const slots = [];
+    const SLOT_DURATION = 120; // 2 tiếng = 120 phút
+    let cursor = startTotal;
+
+    while (cursor < endTotal) {
+      const slotEnd = Math.min(cursor + SLOT_DURATION, endTotal);
+      const fromH = String(Math.floor(cursor / 60)).padStart(2, '0');
+      const fromM = String(cursor % 60).padStart(2, '0');
+      const toH = String(Math.floor(slotEnd / 60)).padStart(2, '0');
+      const toM = String(slotEnd % 60).padStart(2, '0');
+
+      slots.push({
+        time: `${fromH}:${fromM} - ${toH}:${toM}`,
+        price: formattedPrice,
+        available: true
+      });
+      cursor = slotEnd;
+    }
+    return slots;
+  };
+
   // UseEffect to fetch field data if in edit mode
   useEffect(() => {
     if (isEditMode && id) {
@@ -90,6 +191,13 @@ export function AddFieldPage() {
       fetchFieldData();
     }
   }, [isEditMode, id, navigate]);
+
+  // Sync openTimeStart/End khi newField.openTime thay đổi (từ fetch edit mode)
+  useEffect(() => {
+    const parsed = parseOpenTime(newField.openTime);
+    setOpenTimeStart(parsed.start);
+    setOpenTimeEnd(parsed.end);
+  }, [newField.openTime]);
 
   // Redirect if not owner/admin
   if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
@@ -274,13 +382,14 @@ export function AddFieldPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price">Giá thuê (VNĐ) <span className="text-red-500">*</span></Label>
+                <Label htmlFor="price">Giá thuê cơ bản (VNĐ) <span className="text-red-500">*</span></Label>
                 <Input
                   id="price"
                   placeholder="Ví dụ: 200000"
                   value={newField.price}
-                  onChange={(e) => setNewField({ ...newField, price: e.target.value })}
+                  onChange={(e) => handlePriceChange(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">Giá này sẽ được áp dụng mặc định cho các khung giờ khi tạo mới.</p>
               </div>
 
               <div className="space-y-2">
@@ -381,14 +490,84 @@ export function AddFieldPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="openTime">Giờ mở cửa</Label>
-                <Input
-                  id="openTime"
-                  placeholder="5:00 - 23:00"
-                  value={newField.openTime}
-                  onChange={(e) => setNewField({ ...newField, openTime: e.target.value })}
-                />
+                <Label>Giờ mở cửa</Label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="openTimeStart" className="text-xs text-muted-foreground">Giờ bắt đầu</Label>
+                    <Select
+                      value={openTimeStart}
+                      onValueChange={(val) => handleOpenTimeChange(val, openTimeEnd)}
+                    >
+                      <SelectTrigger id="openTimeStart">
+                        <SelectValue placeholder="Chọn giờ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hourOptions.map((h) => (
+                          <SelectItem key={h} value={h}>{h}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="mt-5 text-muted-foreground font-medium">–</span>
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="openTimeEnd" className="text-xs text-muted-foreground">Giờ kết thúc</Label>
+                    <Select
+                      value={openTimeEnd}
+                      onValueChange={(val) => handleOpenTimeChange(openTimeStart, val)}
+                    >
+                      <SelectTrigger id="openTimeEnd">
+                        <SelectValue placeholder="Chọn giờ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hourOptions.map((h) => (
+                          <SelectItem key={h} value={h}>{h}:00</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {newField.openTime && (
+                  <p className="text-xs text-muted-foreground">Giờ hoạt động: <span className="text-green-600 font-medium">{newField.openTime}</span></p>
+                )}
               </div>
+
+              {/* Time Slots Table */}
+              {newField.timeSlots.length > 0 && (
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <Label>Cài đặt giá theo khung giờ</Label>
+                    <Badge variant="outline" className="text-xs">
+                      {newField.timeSlots.length} khung giờ
+                    </Badge>
+                  </div>
+                  <div className="rounded-md border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="py-2 px-4 text-left font-medium text-gray-500">Khung giờ</th>
+                          <th className="py-2 px-4 text-left font-medium text-gray-500">Giá thuê (VNĐ hoặc chữ có 'đ')</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {newField.timeSlots.map((slot, index) => (
+                          <tr key={index} className="hover:bg-gray-50/50">
+                            <td className="py-2 px-4 font-medium text-gray-900">{slot.time}</td>
+                            <td className="py-2 px-4">
+                              <Input
+                                value={slot.price}
+                                onChange={(e) => handleTimeSlotPriceChange(index, e.target.value)}
+                                className="h-8 max-w-[200px]"
+                                placeholder="Ví dụ: 300.000đ"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Bạn có thể tùy chỉnh giá riêng biệt cho từng khung giờ ở trên (ví dụ giờ vàng giá cao hơn).</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -99,6 +99,10 @@ const fieldSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for query optimization
+fieldSchema.index({ ownerId: 1 });
+fieldSchema.index({ status: 1, available: 1 });
+
 const Field = mongoose.model('Field', fieldSchema);
 
 export default Field;

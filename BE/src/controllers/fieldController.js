@@ -109,13 +109,78 @@ const DEFAULT_TIME_SLOTS = [
   { time: '22:00 - 23:00', price: '300.000đ' }
 ];
 
+/**
+ * Parse openTime dạng "H:MM - H:MM" hoặc "HH:MM - HH:MM"
+ * Trả về mảng timeSlots tự động chia theo khung 2 tiếng.
+ * Slot cuối cùng có thể ít hơn 2 tiếng nếu tổng thời gian không chia đều.
+ * @param {string} openTime - ví dụ: "15:00 - 22:00" hoặc "5:00 - 23:00"
+ * @param {string} defaultPrice - giá base để format, ví dụ: "150000"
+ * @returns {Array<{time: string, price: string, available: boolean}>}
+ */
+const generateTimeSlotsFromOpenTime = (openTime, defaultPrice) => {
+  try {
+    // Parse openTime: hỗ trợ cả "5:00 - 23:00" và "05:00 - 23:00"
+    const match = openTime.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if (!match) return DEFAULT_TIME_SLOTS;
+
+    const startHour = parseInt(match[1], 10);
+    const startMin = parseInt(match[2], 10);
+    const endHour = parseInt(match[3], 10);
+    const endMin = parseInt(match[4], 10);
+
+    const startTotal = startHour * 60 + startMin; // tổng phút từ 00:00
+    const endTotal = endHour * 60 + endMin;
+
+    if (endTotal <= startTotal) return DEFAULT_TIME_SLOTS;
+
+    // Format giá: nếu là số thuần → format VNĐ, nếu đã có "đ" giữ nguyên
+    let formattedPrice = defaultPrice || '200.000đ';
+    const numericPrice = parseInt(String(defaultPrice).replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(numericPrice) && numericPrice > 0) {
+      formattedPrice = numericPrice.toLocaleString('vi-VN') + 'đ';
+    }
+
+    const slots = [];
+    const SLOT_DURATION = 120; // 2 tiếng = 120 phút
+    let cursor = startTotal;
+
+    while (cursor < endTotal) {
+      const slotEnd = Math.min(cursor + SLOT_DURATION, endTotal);
+
+      const fromH = String(Math.floor(cursor / 60)).padStart(2, '0');
+      const fromM = String(cursor % 60).padStart(2, '0');
+      const toH = String(Math.floor(slotEnd / 60)).padStart(2, '0');
+      const toM = String(slotEnd % 60).padStart(2, '0');
+
+      slots.push({
+        time: `${fromH}:${fromM} - ${toH}:${toM}`,
+        price: formattedPrice,
+        available: true
+      });
+
+      cursor = slotEnd;
+    }
+
+    return slots.length > 0 ? slots : DEFAULT_TIME_SLOTS;
+  } catch (e) {
+    console.error('generateTimeSlotsFromOpenTime error:', e);
+    return DEFAULT_TIME_SLOTS;
+  }
+};
+
 export const createField = async (req, res) => {
   try {
     const fieldData = { ...req.body };
 
-    // Nếu không có timeSlots hoặc timeSlots rỗng, sử dụng mặc định
+    // Nếu không có timeSlots hoặc timeSlots rỗng:
+    // Ưu tiên tạo tự động từ openTime nếu có, ngược lại dùng DEFAULT_TIME_SLOTS
+    // Nếu Frontend đã gửi timeSlots (tùy chỉnh giá), ta giữ nguyên!
     if (!fieldData.timeSlots || fieldData.timeSlots.length === 0) {
-      fieldData.timeSlots = DEFAULT_TIME_SLOTS;
+      if (fieldData.openTime) {
+        fieldData.timeSlots = generateTimeSlotsFromOpenTime(fieldData.openTime, fieldData.price);
+      } else {
+        fieldData.timeSlots = DEFAULT_TIME_SLOTS;
+      }
     }
 
     // Tạo field mới và lưu vào database
@@ -148,10 +213,27 @@ export const updateField = async (req, res) => {
       }
     }
 
+    const updateData = { ...req.body };
+
+    // KIỂM TRA MẢNG timeSlots TỪ FRONTEND
+    // Frontend hiện đã gửi kèm timeSlots có giá tùy chỉnh.
+    // Nếu mảng timeSlots từ frontend RỖNG, hoặc không gửi lên, ta mới generate lại.
+    // Nếu frontend gửi lên mảng timeSlots có dữ liệu, ta DÙNG LUÔN mảng đó (để giữ giá tùy chỉnh).
+    if (!updateData.timeSlots || updateData.timeSlots.length === 0) {
+      const openTimeToUse = updateData.openTime || field.openTime;
+      if (openTimeToUse) {
+        const priceToUse = updateData.price || field.price;
+        updateData.timeSlots = generateTimeSlotsFromOpenTime(openTimeToUse, priceToUse);
+        console.log(`🕐 Regenerated ${updateData.timeSlots.length} time slots from openTime: "${openTimeToUse}"`);
+      }
+    } else {
+      console.log(`🕐 Preserved ${updateData.timeSlots.length} custom time slots provided by frontend`);
+    }
+
     // Cập nhật field trong database
     const updatedField = await Field.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 

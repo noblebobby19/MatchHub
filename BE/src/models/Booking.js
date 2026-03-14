@@ -80,6 +80,11 @@ const bookingSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for query optimization
+bookingSchema.index({ fieldId: 1, date: 1, status: 1 });
+bookingSchema.index({ userId: 1, status: 1 });
+bookingSchema.index({ createdAt: -1 });
+
 const Booking = mongoose.model('Booking', bookingSchema);
 
 export default Booking;
