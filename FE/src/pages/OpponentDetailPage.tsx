@@ -150,9 +150,16 @@ export function OpponentDetailPage() {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle className="text-2xl mb-2">{post.teamName || 'Chi tiết bài đăng'}</CardTitle>
-                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-muted-foreground mt-1">
                                             <Users className="h-4 w-4" />
                                             <span>Đăng bởi: {post.user.name}</span>
+                                            {post.phone && (
+                                                <>
+                                                    <span className="mx-2">•</span>
+                                                    <Phone className="h-4 w-4" />
+                                                    <span>{post.phone}</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <Badge className="text-lg px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 border-red-200">
@@ -191,6 +198,15 @@ export function OpponentDetailPage() {
                                             <p className="font-medium">{post.skillLevel}</p>
                                         </div>
                                     </div>
+                                    {post.phone && (
+                                        <div className="flex items-center gap-3">
+                                            <Phone className="h-5 w-5 text-red-600" />
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Liên hệ</p>
+                                                <p className="font-medium">{post.phone}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator />

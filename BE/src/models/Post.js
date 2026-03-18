@@ -57,6 +57,10 @@ const postSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    phone: {
+        type: String,
+        trim: true
+    },
     status: {
         type: String,
         enum: ['open', 'closed'],
