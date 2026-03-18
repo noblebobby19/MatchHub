@@ -38,29 +38,16 @@ export const createBooking = async (req, res) => {
     console.log('✅ User found:', { id: user._id, name: user.name, email: user.email });
 
     // Check for existing bookings
-    // Chỉ block nếu đã có booking 'confirmed' hoặc 'completed'.
-    // 'pending' bookings không block người khác đặt (tùy logic business, ở đây theo yêu cầu là chờ duyệt thì người khác vẫn đặt được)
+    // Bloc nếu đã có booking 'confirmed', 'completed', HOẶC 'pending'
     const existingBooking = await Booking.findOne({
       fieldId,
       date,
       time,
-      status: { $in: ['confirmed', 'CONFIRMED', 'completed'] }
-    });
-
-    const myPendingBooking = await Booking.findOne({
-      fieldId,
-      date,
-      time,
-      userId: req.user._id,
-      status: { $in: ['pending', 'PENDING'] }
+      status: { $in: ['confirmed', 'CONFIRMED', 'completed', 'pending', 'PENDING'] }
     });
 
     if (existingBooking) {
-      return res.status(409).json({ message: 'Khung giờ này đã được đặt (Đã xác nhận). Vui lòng chọn giờ khác.' });
-    }
-
-    if (myPendingBooking) {
-      return res.status(409).json({ message: 'Bạn đã đặt khung giờ này rồi và đang chờ duyệt.' });
+      return res.status(409).json({ message: 'Khung giờ này đã được đặt hoặc đang chờ duyệt. Vui lòng chọn giờ khác.' });
     }
 
     console.log('✅ Slot available, proceeding to create booking...');
@@ -99,18 +86,13 @@ export const checkAvailability = async (req, res) => {
 
     console.log(`🔍 Checking availability for Field: ${fieldId}, Date: ${date}, User: ${userId || 'Guest'}`);
 
-    // Logic:
-    // 1. Lấy tất cả booking confirmed/completed (để hiện là đã đặt cho tất cả mọi người)
-    // 2. Lấy booking pending CỦA USER ĐÓ (để hiện là đã đặt/chờ duyệt cho chính họ)
-    // 3. Booking pending của người khác KHÔNG lấy (với họ thì slot đó vẫn trống)
-
+    // Logic mới theo yêu cầu:
+    // Bất kỳ booking nào đang confirmed/completed hoặc pending đều tính là ĐÃ ĐẶT cho TẤT CẢ mọi người.
+    // Nếu bị owner từ chối (cancelled, rejected) thì slot mới trống lại.
     const query = {
       fieldId,
       date,
-      $or: [
-        { status: { $in: ['confirmed', 'CONFIRMED', 'completed'] } }, // Confirmed bookings are always blocked
-        ...(userId ? [{ status: { $in: ['pending', 'PENDING'] }, userId }] : []) // Own pending bookings are shown
-      ]
+      status: { $in: ['confirmed', 'CONFIRMED', 'completed', 'pending', 'PENDING'] }
     };
 
     const bookings = await Booking.find(query).select('time timeSlot status');
@@ -325,23 +307,13 @@ export const createBankingBooking = async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User không tồn tại' });
 
-    // Kiểm tra slot đã được confirmed chưa
-    const existingConfirmed = await Booking.findOne({
+    // Kiểm tra slot đã được đặt chưa (bao gồm cả confirmed và pending)
+    const existingBooking = await Booking.findOne({
       fieldId, date, time,
-      status: { $in: ['confirmed', 'CONFIRMED', 'completed'] }
+      status: { $in: ['confirmed', 'CONFIRMED', 'completed', 'pending', 'PENDING'] }
     });
-    if (existingConfirmed) {
-      return res.status(409).json({ message: 'Khung giờ này đã được đặt. Vui lòng chọn giờ khác.' });
-    }
-
-    // Kiểm tra user đã đặt slot này chưa (đang PENDING banking)
-    const myPending = await Booking.findOne({
-      fieldId, date, time,
-      userId: req.user._id,
-      status: { $in: ['pending', 'PENDING'] }
-    });
-    if (myPending) {
-      return res.status(409).json({ message: 'Bạn đã có đơn đặt sân này đang chờ xác nhận.' });
+    if (existingBooking) {
+      return res.status(409).json({ message: 'Khung giờ này đã được đặt hoặc đang chờ xác nhận. Vui lòng chọn giờ khác.' });
     }
 
     // Lấy cấu hình ngân hàng
@@ -446,8 +418,8 @@ export const confirmPayment = async (req, res) => {
     try {
       await Notification.create({
         user: booking.userId._id || booking.userId,
-        title: '✅ Đặt sân thành công!',
-        message: `Đơn đặt sân ${booking.fieldName} (${booking.date} - ${booking.time}) đã được xác nhận. Mã đơn: ${booking.bookingCode}`,
+        title: 'Cập nhật trạng thái đặt sân',
+        message: `✅ Đơn đặt sân ${booking.fieldName} của bạn đã được Xác nhận!\nNgày: ${booking.date}\nGiờ: ${booking.time}`,
         type: 'success',
         link: `/chi-tiet-don-dat-san/${booking._id}`
       });
@@ -545,18 +517,25 @@ export const cancelBooking = async (req, res) => {
 
     // Notification cho User
     try {
-      const userNotifTitle = isRefundable ? '💸 Đã hủy – Chờ hoàn tiền' : '❌ Đã hủy đặt sân';
-      const userNotifMsg = isRefundable
-        ? `Đơn ${booking.bookingCode} đã hủy trước 24h. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`
-        : (booking.paymentMethod === 'banking' && diffHours < 24)
-          ? `Đơn ${booking.bookingCode} đã hủy trễ hạn. Theo chính sách, bạn không được hoàn lại tiền cọc.`
-          : `Đơn đặt sân ${booking.fieldName} ngày ${booking.date} đã bị hủy.`;
+      let userNotifTitle = 'Cập nhật trạng thái đặt sân';
+      let userNotifMsg = `❌ Đơn đặt sân ${booking.fieldName} của bạn đã bị Từ chối/Hủy.\nNgày: ${booking.date}\nGiờ: ${booking.time}`;
+      let notifType = 'error';
+
+      if (isRefundable) {
+        userNotifTitle = '💸 Đã hủy – Chờ hoàn tiền';
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trước 24h. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`;
+        notifType = 'warning';
+      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && diffHours < 24) {
+        // Chỉ hiện thông báo mất cọc khi user hủy đơn ĐÃ CONFIRM trễ hạn
+        userNotifTitle = '❌ Đã hủy đặt sân';
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trễ hạn. Theo chính sách, bạn không được hoàn lại tiền cọc.`;
+      }
 
       await Notification.create({
         user: booking.userId._id,
         title: userNotifTitle,
         message: userNotifMsg,
-        type: isRefundable ? 'warning' : 'error',
+        type: notifType,
         link: `/chi-tiet-don-dat-san/${booking._id}`
       });
     } catch (e) { console.error('User Notification error:', e.message); }

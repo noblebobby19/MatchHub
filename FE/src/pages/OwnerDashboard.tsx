@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   CalendarDays,
   DollarSign,
-  Settings,
   LogOut,
   Plus,
   Search,
@@ -572,6 +571,18 @@ export function OwnerDashboard() {
           }
         };
 
+        const handleCancelBankingBooking = async (id: string) => {
+          if (!window.confirm('Bạn có chắc chắn muốn từ chối đơn đặt sân này không?')) return;
+          try {
+            await apiService.cancelBooking(id);
+            toast.success('Đã từ chối đơn đặt sân thành công.');
+            const updated = await apiService.getBookings();
+            setBookings(Array.isArray(updated) ? updated : []);
+          } catch (err: any) {
+            toast.error(err.message || 'Từ chối đơn thất bại');
+          }
+        };
+
         const handleMarkRefunded = async (id: string) => {
           try {
             await apiService.markRefunded(id);
@@ -580,18 +591,6 @@ export function OwnerDashboard() {
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
             toast.error(err.message || 'Cập nhật thất bại');
-          }
-        };
-
-        const handleCancelBankingBooking = async (id: string) => {
-          if (!window.confirm('Bạn có chắc chắn muốn hủy đơn đặt sân này không?')) return;
-          try {
-            await apiService.cancelBooking(id);
-            toast.success('Đã hủy đơn đặt sân thành công.');
-            const updated = await apiService.getBookings();
-            setBookings(Array.isArray(updated) ? updated : []);
-          } catch (err: any) {
-            toast.error(err.message || 'Hủy đơn thất bại');
           }
         };
 
@@ -670,7 +669,7 @@ export function OwnerDashboard() {
                                         </Button>
                                         <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-7"
                                           onClick={() => handleCancelBankingBooking(b._id)}>
-                                          <Ban className="h-3 w-3 mr-1" />Hủy đơn
+                                          <Ban className="h-3 w-3 mr-1" />Từ chối
                                         </Button>
                                       </>
                                     )}

@@ -75,6 +75,7 @@ class ApiService {
             // Token expired or invalid
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            window.location.href = '/dang-nhap';
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
           }
         }
@@ -216,6 +217,7 @@ class ApiService {
       if (response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        window.location.href = '/dang-nhap';
         throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
       }
 

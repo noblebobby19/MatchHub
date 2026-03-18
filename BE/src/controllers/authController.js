@@ -68,7 +68,7 @@ export const register = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
-      { expiresIn: '7d' }
+      { expiresIn: '1h' }
     );
 
     // Trả về thông tin user đã được lưu vào database
@@ -137,7 +137,7 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
-      { expiresIn: '7d' }
+      { expiresIn: '1h' }
     );
 
     // Trả về thông tin user từ database
@@ -199,7 +199,7 @@ export const googleCallback = async (req, res) => {
     const token = jwt.sign(
       { userId: req.user._id },
       process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
-      { expiresIn: '7d' }
+      { expiresIn: '1h' }
     );
 
     // Sanitize CLIENT_URL

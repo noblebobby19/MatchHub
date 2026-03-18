@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Banknote, Building2, Clock, MapPin, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import apiService from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +16,6 @@ export function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Form state
@@ -137,111 +135,43 @@ export function CheckoutPage() {
       return;
     }
 
-    if (paymentMethod === "cash") {
-      // Thanh toán tiền mặt - gọi API trực tiếp
-      setIsProcessing(true);
-
-      try {
-        // Kiểm tra token trước khi gọi API
-        const token = localStorage.getItem('token');
-        if (!token) {
-          toast.error("Bạn cần đăng nhập để thanh toán. Đang chuyển đến trang đăng nhập...");
-          setIsProcessing(false);
-          setTimeout(() => {
-            navigate('/dang-nhap');
-          }, 1000);
-          return;
-        }
-
-        const bookingRequestData = {
-          fieldId: bookingData.fieldId,
-          date: date,
-          time: timeSlot.time,
-          timeSlot: timeSlot.time,
-          amount: timeSlot.price
-        };
-
-        console.log('📝 Creating booking with data:', bookingRequestData);
-        console.log('🔑 Token exists:', !!token);
-        console.log('👤 User from context:', user ? { id: user.id, email: user.email, name: user.name } : 'NO USER');
-
-        // Log token để debug (chỉ log một phần để bảo mật)
-        if (token) {
-          console.log('🔑 Token preview:', token.substring(0, 20) + '...' + token.substring(token.length - 10));
-        }
-
-        const result = await apiService.createBooking(bookingRequestData);
-
-        console.log('Booking created successfully:', result);
-
-        // Điều hướng sang trang thành công, truyền dữ liệu booking + user + field
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error("Bạn cần đăng nhập để thanh toán.");
         setIsProcessing(false);
-        navigate('/dat-san-thanh-cong', {
-          state: {
-            booking: result,
-            user,
-            field,
-            timeSlot,
+        navigate('/dang-nhap');
+        return;
+      }
+
+      const result = await apiService.createBankingBooking({
+        fieldId: bookingData.fieldId,
+        date,
+        time: timeSlot.time,
+        timeSlot: timeSlot.time,
+        amount: timeSlot.price
+      });
+
+      setIsProcessing(false);
+      navigate('/thanh-toan-qr', {
+        state: {
+          bookingCode: result.bookingCode,
+          depositAmount: result.depositAmount,
+          expireAt: result.expireAt,
+          bookingId: result.booking._id,
+          bankConfig: result.bankConfig,
+          bookingInfo: {
+            fieldName: field.name,
             date,
+            time: timeSlot.time,
+            amountValue: result.booking.amountValue
           }
-        });
-      } catch (err: any) {
-        console.error("Error processing payment:", err);
-        setIsProcessing(false);
-
-        // Handle specific error messages
-        let errorMessage = err?.message || "Thanh toán thất bại. Vui lòng thử lại.";
-
-        // Check if error is about authentication
-        if (errorMessage.includes('đăng nhập') || errorMessage.includes('token') || errorMessage.includes('401')) {
-          toast.error(errorMessage);
-          setTimeout(() => {
-            navigate('/dang-nhap');
-          }, 1500);
-        } else {
-          toast.error(errorMessage);
         }
-      }
-    } else {
-      // Chuyển khoản ngân hàng – tạo banking booking và chuyển sang trang QR
-      setIsProcessing(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          toast.error("Bạn cần đăng nhập để thanh toán.");
-          setIsProcessing(false);
-          navigate('/dang-nhap');
-          return;
-        }
-
-        const result = await apiService.createBankingBooking({
-          fieldId: bookingData.fieldId,
-          date,
-          time: timeSlot.time,
-          timeSlot: timeSlot.time,
-          amount: timeSlot.price
-        });
-
-        setIsProcessing(false);
-        navigate('/thanh-toan-qr', {
-          state: {
-            bookingCode: result.bookingCode,
-            depositAmount: result.depositAmount,
-            expireAt: result.expireAt,
-            bookingId: result.booking._id,
-            bankConfig: result.bankConfig,
-            bookingInfo: {
-              fieldName: field.name,
-              date,
-              time: timeSlot.time,
-              amountValue: result.booking.amountValue
-            }
-          }
-        });
-      } catch (err: any) {
-        setIsProcessing(false);
-        toast.error(err?.message || "Tạo đơn thất bại. Vui lòng thử lại.");
-      }
+      });
+    } catch (err: any) {
+      setIsProcessing(false);
+      toast.error(err?.message || "Tạo đơn thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -304,45 +234,6 @@ export function CheckoutPage() {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Method */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Phương thức thanh toán</CardTitle>
-                  <CardDescription>Chọn phương thức thanh toán bạn muốn sử dụng</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <div className="space-y-3">
-                      <div className="flex items-start space-x-3 space-y-0 rounded-lg border-2 p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="cash" id="cash" className="mt-1" />
-                        <div className="flex-1">
-                          <Label htmlFor="cash" className="cursor-pointer flex items-center gap-2">
-                            <Banknote className="h-5 w-5 text-green-600" />
-                            <span className="font-semibold">Tiền mặt</span>
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Thanh toán trực tiếp tại sân
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3 space-y-0 rounded-lg border-2 p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                        <RadioGroupItem value="banking" id="banking" className="mt-1" />
-                        <div className="flex-1">
-                          <Label htmlFor="banking" className="cursor-pointer flex items-center gap-2">
-                            <Building2 className="h-5 w-5 text-green-600" />
-                            <span className="font-semibold">Chuyển khoản ngân hàng</span>
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Thanh toán qua Internet Banking, Mobile Banking
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </RadioGroup>
                 </CardContent>
               </Card>
 
