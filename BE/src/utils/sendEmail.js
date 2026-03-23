@@ -1,38 +1,48 @@
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-import dns from 'dns';
-
-// Fix lỗi treo (hang) do phân giải IPv6 trên các Node.js >= 17 (Render/Vercel)
-dns.setDefaultResultOrder('ipv4first');
-
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true = 465, false = STARTTLS cho cổng khác
-    auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS
-    }
-});
-
+// Backend Render chỉ gọi qua API Vercel bằng lệnh POST HTTPS để vượt khóa mạng.
 const sendEmail = async (options) => {
-    const mailOptions = {
-        from: `"MatchHub Support" <${process.env.MAIL_USER}>`,
-        to: options.email,
+    const payload = {
+        email: options.email,
         subject: options.subject,
-        html: options.message
+        message: options.message,
+        mailUser: process.env.MAIL_USER,
+        mailPass: process.env.MAIL_PASS
     };
 
-    // Vercel thường chặn đường TCP lâu nếu không may, ta bọc thời hạn tối đa 8.5 giây để nhả response cho người dùng,
-    // tránh trường hợp trên frontend cứ xoay tròn mãi mãi do SMTP host treo.
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Nodemailer bị nghẽn mạng hoặc quá tải trên Vercel (>8.5 giây)')), 8500)
-    );
+    // Timeout 8.5s khống chế
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8500);
 
-    await Promise.race([sendPromise, timeoutPromise]);
+    // Xác định đích đến (URL Vercel hoặc local)
+    // process.env.CLIENT_URL là link gốc của frontend vd: https://match-hub-opal.vercel.app
+    const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
+    const proxyUrl = `${clientURL}/api/sendEmail`;
+
+    try {
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': 'matchhub_secret_key_12345'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Lỗi gửi mail qua Vercel Proxy');
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Vercel API Proxy quá tải phản hồi > 8.5s');
+        }
+        throw new Error(error.message || 'Lỗi Proxy gửi mail kết nối');
+    }
 };
 
 export default sendEmail;
