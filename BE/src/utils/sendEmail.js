@@ -9,18 +9,10 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS
-    },
-    pool: true,
-    maxConnections: 1,
-    maxMessages: 10,
-    tls: {
-        rejectUnauthorized: false
     }
 });
 
 const sendEmail = async (options) => {
-
-    // Define email options
     const mailOptions = {
         from: `"MatchHub Support" <${process.env.MAIL_USER}>`,
         to: options.email,
@@ -28,13 +20,8 @@ const sendEmail = async (options) => {
         html: options.message
     };
 
-    // Send email with 5s timeout to prevent serverless function hangs
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Nodemailer timeout exceed 5000ms')), 5000)
-    );
-
-    await Promise.race([sendPromise, timeoutPromise]);
+    // Send email without arbitrary JS timeout to guarantee delivery even if Vercel is slow
+    await transporter.sendMail(mailOptions);
 };
 
 export default sendEmail;
