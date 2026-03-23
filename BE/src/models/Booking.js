@@ -19,6 +19,18 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  customerPhone: {
+    type: String,
+    default: ''
+  },
+  customerEmail: {
+    type: String,
+    default: ''
+  },
+  note: {
+    type: String,
+    default: ''
+  },
   date: {
     type: String,
     required: true

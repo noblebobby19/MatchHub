@@ -16,7 +16,7 @@ export const createBooking = async (req, res) => {
       return res.status(401).json({ message: 'User ID không được cung cấp. Vui lòng đăng nhập lại.' });
     }
 
-    const { fieldId, date, time, timeSlot, amount } = req.body;
+    const { fieldId, date, time, timeSlot, amount, customerName, customerPhone, customerEmail, note } = req.body;
 
     if (!fieldId || !date || !time || !amount) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
@@ -57,7 +57,10 @@ export const createBooking = async (req, res) => {
       fieldId,
       userId: req.user._id,
       fieldName: field.name,
-      customer: user.name,
+      customer: customerName || user.name,
+      customerPhone: customerPhone || user.phone || '',
+      customerEmail: customerEmail || user.email || '',
+      note: note || '',
       date,
       time,
       timeSlot,
@@ -129,7 +132,7 @@ export const getBookings = async (req, res) => {
     // Lấy tất cả bookings từ database với populate để lấy thông tin liên quan
     const bookings = await Booking.find(query)
       .populate('fieldId', 'name location image')
-      .populate('userId', 'name email')
+      .populate('userId', 'name email phone')
       .sort({ createdAt: -1 });
 
     console.log(`✅ Found ${bookings.length} bookings`);
@@ -293,7 +296,7 @@ export const createBankingBooking = async (req, res) => {
       return res.status(401).json({ message: 'Vui lòng đăng nhập để đặt sân.' });
     }
 
-    const { fieldId, date, time, timeSlot, amount } = req.body;
+    const { fieldId, date, time, timeSlot, amount, customerName, customerPhone, customerEmail, note } = req.body;
 
     if (!fieldId || !date || !time || !amount) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
@@ -349,7 +352,10 @@ export const createBankingBooking = async (req, res) => {
       fieldId,
       userId: req.user._id,
       fieldName: field.name,
-      customer: user.name,
+      customer: customerName || user.name,
+      customerPhone: customerPhone || user.phone || '',
+      customerEmail: customerEmail || user.email || '',
+      note: note || '',
       date,
       time,
       timeSlot: timeSlot || time,
@@ -427,9 +433,9 @@ export const confirmPayment = async (req, res) => {
 
     // Gửi email cho user
     try {
-      const userEmail = booking.userId?.email;
+      const userEmail = booking.userId?.email || booking.customerEmail;
       if (userEmail) {
-        await sendEmail({
+        sendEmail({
           email: userEmail,
           subject: '✅ MatchHub – Đặt sân thành công!',
           message: `
@@ -447,8 +453,8 @@ export const confirmPayment = async (req, res) => {
               <p>Cảm ơn bạn đã sử dụng MatchHub! 🎉</p>
             </div>
           `
-        });
-        console.log('📧 Confirmation email sent to:', userEmail);
+        }).catch(err => console.error('Email confirmation error:', err.message));
+        console.log('📧 Confirmation email sending initialized to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
 
@@ -602,9 +608,9 @@ export const markRefunded = async (req, res) => {
 
     // Gửi email hoàn tiền
     try {
-      const userEmail = booking.userId?.email;
+      const userEmail = booking.userId?.email || booking.customerEmail;
       if (userEmail) {
-        await sendEmail({
+        sendEmail({
           email: userEmail,
           subject: '💸 MatchHub – Hoàn tiền thành công',
           message: `
@@ -620,8 +626,8 @@ export const markRefunded = async (req, res) => {
               <p>Cảm ơn bạn đã tin tưởng sử dụng MatchHub!</p>
             </div>
           `
-        });
-        console.log('📧 Refund email sent to:', userEmail);
+        }).catch(err => console.error('Email refund error:', err.message));
+        console.log('📧 Refund email sending initialized to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
 

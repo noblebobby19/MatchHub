@@ -150,7 +150,11 @@ export function CheckoutPage() {
         date,
         time: timeSlot.time,
         timeSlot: timeSlot.time,
-        amount: timeSlot.price
+        amount: timeSlot.price,
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        note: formData.note
       });
 
       setIsProcessing(false);

@@ -26,6 +26,9 @@ interface Booking {
         phone?: string;
     };
     fieldName: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    note?: string;
     customer: string;
     date: string; // YYYY-MM-DD
     time: string;
@@ -202,7 +205,8 @@ export function WeeklyScheduler({ bookings, loading, onUpdateStatus }: WeeklySch
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs font-semibold truncate text-gray-800">{booking.customer}</p>
-                                                                <p className="text-[10px] text-muted-foreground truncate">{booking.userId?.phone || 'Chưa có SĐT'}</p>
+                                                                <p className="text-[10px] text-muted-foreground truncate">{booking.customerPhone || booking.userId?.phone || 'Chưa có SĐT'}</p>
+                                                                {booking.note && <p className="text-[9px] text-orange-600 truncate mt-0.5">Note: {booking.note}</p>}
                                                             </div>
                                                         </div>
 
