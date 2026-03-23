@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Fix lỗi treo (hang) do phân giải IPv6 trên các Node.js >= 17 (Render/Vercel)
+dns.setDefaultResultOrder('ipv4first');
+
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
