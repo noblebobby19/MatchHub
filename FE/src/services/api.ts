@@ -1,4 +1,12 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// Tự động nhận diện môi trường để chọn đúng API (Khỏi cần cài biến môi trường trên Vercel cấu hình lằng nhằng)
+const isLocalhost = Boolean(
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '[::1]' ||
+  window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+);
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (isLocalhost ? 'http://localhost:8000/api' : 'https://matchhub-be.onrender.com/api');
 
 interface RequestOptions {
   method?: string;
