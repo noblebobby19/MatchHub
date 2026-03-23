@@ -1,0 +1,21 @@
+Booking ID: 69c0b118161a83312f14f25d
+Status: CONFIRMED
+CustomerName: Siêu Nhân Đỏ
+CustomerEmail (DB): 'thienconguoiyeu123@gmail.com'
+userIdEmail: 'thienconguoiyeu123@gmail.com'
+CalcEmail: 'thienconguoiyeu123@gmail.com'
+---
+Booking ID: 69c0b0a4161a83312f14f20d
+Status: CONFIRMED
+CustomerName: thien
+CustomerEmail (DB): 'thiendautrau12345@gmail.com'
+userIdEmail: 'thiendautrau12345@gmail.com'
+CalcEmail: 'thiendautrau12345@gmail.com'
+---
+Booking ID: 69c0afcb161a83312f14f1bd
+Status: CONFIRMED
+CustomerName: thien
+CustomerEmail (DB): 'thiendautrau12345@gmail.com'
+userIdEmail: 'thiendautrau12345@gmail.com'
+CalcEmail: 'thiendautrau12345@gmail.com'
+---

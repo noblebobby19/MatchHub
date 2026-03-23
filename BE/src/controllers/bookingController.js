@@ -3,6 +3,7 @@ import Field from '../models/Field.js';
 import User from '../models/User.js';
 import BankConfig from '../models/BankConfig.js';
 import sendEmail from '../utils/sendEmail.js';
+import fs from 'fs';
 
 export const createBooking = async (req, res) => {
   try {
@@ -433,8 +434,9 @@ export const confirmPayment = async (req, res) => {
 
     // Gửi email cho user
     try {
-      const userEmail = booking.userId?.email || booking.customerEmail;
+      const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
+        fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] Attempting to send Confirmation to: ${userEmail}\n`);
         sendEmail({
           email: userEmail,
           subject: '✅ MatchHub – Đặt sân thành công!',
@@ -453,7 +455,12 @@ export const confirmPayment = async (req, res) => {
               <p>Cảm ơn bạn đã sử dụng MatchHub! 🎉</p>
             </div>
           `
-        }).catch(err => console.error('Email confirmation error:', err.message));
+        }).then(() => {
+          fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] SUCCESS sending to: ${userEmail}\n`);
+        }).catch(err => {
+          fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] FAILED sending to: ${userEmail}. Error: ${err.message}\n`);
+          console.error('Email confirmation error:', err.message);
+        });
         console.log('📧 Confirmation email sending initialized to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
@@ -503,18 +510,26 @@ export const cancelBooking = async (req, res) => {
     let newStatus;
     let isRefundable = false;
 
-    // Chỉ áp dụng hoàn tiền cho confirmed banking
-    if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed')) {
-      if (diffHours >= 24) {
+    if (booking.paymentMethod === 'banking') {
+      if (['PENDING', 'pending'].includes(booking.status)) {
+        // Đơn CK chưa được duyệt (Khách vừa đặt xong đổi ý luôn) -> Chắc chắn được hoàn cọc
         newStatus = 'REFUND_PENDING';
         isRefundable = true;
+      } else if (['CONFIRMED', 'confirmed'].includes(booking.status)) {
+        // Đơn CK ĐÃ DUYỆT -> Bắt buộc phải hủy trước 24h thì mới được hoàn cọc
+        if (diffHours >= 24) {
+          newStatus = 'REFUND_PENDING';
+          isRefundable = true;
+        } else {
+          newStatus = 'CANCELLED';
+          isRefundable = false;
+        }
       } else {
         newStatus = 'CANCELLED';
-        isRefundable = false;
       }
     } else {
-      // Các trường hợp khác (Cash hoặc chưa Confirm) hủy là xong
-      newStatus = booking.paymentMethod === 'banking' ? 'CANCELLED' : 'cancelled';
+      // Đơn tiền mặt
+      newStatus = 'cancelled';
     }
 
     booking.status = newStatus;
@@ -545,6 +560,35 @@ export const cancelBooking = async (req, res) => {
         link: `/chi-tiet-don-dat-san/${booking._id}`
       });
     } catch (e) { console.error('User Notification error:', e.message); }
+
+    // Gửi email báo Hủy/Từ chối cho user
+    try {
+      const userEmail = booking.customerEmail || booking.userId?.email;
+      if (userEmail) {
+        let reason = req.user.role === 'owner' ? 'từ chối bởi chủ sân' : 'hủy bởi bạn';
+        
+        sendEmail({
+          email: userEmail,
+          subject: '❌ MatchHub – Đặt sân bị hủy/từ chối',
+          message: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              <h2 style="color:#dc2626">❌ Đơn đặt sân đã bị hủy</h2>
+              <p>Xin chào <strong>${booking.userId?.name || booking.customer}</strong>,</p>
+              <p>Đơn đặt sân của bạn đã bị <strong>${reason}</strong>.</p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                <tr><td style="padding:8px;background:#fef2f2"><strong>Mã đơn:</strong></td><td style="padding:8px">${booking.bookingCode || 'Tiền mặt'}</td></tr>
+                <tr><td style="padding:8px"><strong>Sân:</strong></td><td style="padding:8px">${booking.fieldName}</td></tr>
+                <tr><td style="padding:8px;background:#fef2f2"><strong>Ngày:</strong></td><td style="padding:8px">${booking.date}</td></tr>
+                <tr><td style="padding:8px"><strong>Giờ:</strong></td><td style="padding:8px">${booking.time}</td></tr>
+              </table>
+              ${isRefundable ? '<p style="color:#16a34a;font-weight:bold">✅ Đơn của bạn đủ điều kiện hoàn tiền cọc. Quá trình hoàn tiền đang được xử lý.</p>' : ''}
+              <p>Cảm ơn bạn đã liên hệ MatchHub!</p>
+            </div>
+          `
+        }).catch(err => console.error('Email cancel error:', err.message));
+        console.log('📧 Cancel email sending initialized to:', userEmail);
+      }
+    } catch (e) { console.error('Email error:', e.message); }
 
     // Notification cho Chủ Sân (Owner)
     try {
@@ -608,7 +652,7 @@ export const markRefunded = async (req, res) => {
 
     // Gửi email hoàn tiền
     try {
-      const userEmail = booking.userId?.email || booking.customerEmail;
+      const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
         sendEmail({
           email: userEmail,
