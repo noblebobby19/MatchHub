@@ -552,12 +552,12 @@ export function OwnerDashboard() {
         );
 
         const statusConfig: Record<string, { label: string; className: string }> = {
-          PENDING: { label: '⏳ Chờ CK', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+          PENDING: { label: '⏳ Chờ xác nhận', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
           CONFIRMED: { label: '✅ Đã xác nhận', className: 'bg-green-100 text-green-800 border-green-300' },
           EXPIRED: { label: '⏰ Hết hạn', className: 'bg-gray-100 text-gray-600 border-gray-300' },
           CANCELLED: { label: '❌ Đã hủy', className: 'bg-red-100 text-red-800 border-red-300' },
-          REFUND_PENDING: { label: '💸 Chờ hoàn TM', className: 'bg-orange-100 text-orange-800 border-orange-300' },
-          REFUNDED: { label: '✅ Đã hoàn TM', className: 'bg-purple-100 text-purple-800 border-purple-300' },
+          REFUND_PENDING: { label: '💸 Chờ hoàn tiền', className: 'bg-orange-100 text-orange-800 border-orange-300' },
+          REFUNDED: { label: '✅ Đã hoàn tiền', className: 'bg-purple-100 text-purple-800 border-purple-300' },
         };
 
         const handleConfirmPayment = async (id: string) => {
@@ -805,7 +805,7 @@ export function OwnerDashboard() {
               onClick={() => setActiveTab('banking')}
             >
               <Banknote className="h-4 w-4 mr-2" />
-              Thanh toán CK
+              Thanh toán
               {bookings.filter((b: any) => b.paymentMethod === 'banking' && b.status === 'PENDING').length > 0 && (
                 <span className="ml-auto bg-yellow-400 text-yellow-900 text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {bookings.filter((b: any) => b.paymentMethod === 'banking' && b.status === 'PENDING').length}
