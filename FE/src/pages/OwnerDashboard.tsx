@@ -80,16 +80,19 @@ interface Booking {
 
 export function OwnerDashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loadingAuth } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'fields' | 'bookings' | 'banking'>('overview');
   const [fields, setFields] = useState<Field[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [bankingPage, setBankingPage] = useState(1);
+  const [processingIds, setProcessingIds] = useState<Record<string, string>>({});
   const itemsPerPage = 5;
 
   useEffect(() => {
+    if (loadingAuth) return;
+
     const fetchData = async () => {
       if (!user || !['owner', 'admin'].includes(user.role)) {
         navigate('/');
@@ -124,7 +127,7 @@ export function OwnerDashboard() {
     };
 
     fetchData();
-  }, [user, navigate]);
+  }, [user, navigate, loadingAuth]);
 
   const handleLogout = () => {
     logout();
@@ -561,6 +564,7 @@ export function OwnerDashboard() {
         };
 
         const handleConfirmPayment = async (id: string) => {
+          setProcessingIds(prev => ({ ...prev, [id]: 'confirm' }));
           try {
             await apiService.confirmPayment(id);
             toast.success('Đã xác nhận thanh toán! Email xác nhận đã gửi cho khách.');
@@ -568,11 +572,14 @@ export function OwnerDashboard() {
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
             toast.error(err.message || 'Xác nhận thất bại');
+          } finally {
+            setProcessingIds(prev => { const next = { ...prev }; delete next[id]; return next; });
           }
         };
 
         const handleCancelBankingBooking = async (id: string) => {
           if (!window.confirm('Bạn có chắc chắn muốn từ chối đơn đặt sân này không?')) return;
+          setProcessingIds(prev => ({ ...prev, [id]: 'cancel' }));
           try {
             await apiService.cancelBooking(id);
             toast.success('Đã từ chối đơn đặt sân thành công.');
@@ -580,10 +587,13 @@ export function OwnerDashboard() {
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
             toast.error(err.message || 'Từ chối đơn thất bại');
+          } finally {
+            setProcessingIds(prev => { const next = { ...prev }; delete next[id]; return next; });
           }
         };
 
         const handleMarkRefunded = async (id: string) => {
+          setProcessingIds(prev => ({ ...prev, [id]: 'refund' }));
           try {
             await apiService.markRefunded(id);
             toast.success('Đã đánh dấu hoàn tiền! Email thông báo đã gửi cho khách.');
@@ -591,6 +601,8 @@ export function OwnerDashboard() {
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
             toast.error(err.message || 'Cập nhật thất bại');
+          } finally {
+            setProcessingIds(prev => { const next = { ...prev }; delete next[id]; return next; });
           }
         };
 
@@ -664,19 +676,25 @@ export function OwnerDashboard() {
                                     {b.status === 'PENDING' && (
                                       <>
                                         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs h-7"
-                                          onClick={() => handleConfirmPayment(b._id)}>
-                                          <CheckCircle2 className="h-3 w-3 mr-1" />Xác nhận
+                                          onClick={() => handleConfirmPayment(b._id)}
+                                          disabled={!!processingIds[b._id]}>
+                                          {processingIds[b._id] === 'confirm' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                          {processingIds[b._id] === 'confirm' ? 'Đang xử lý...' : 'Xác nhận'}
                                         </Button>
                                         <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-7"
-                                          onClick={() => handleCancelBankingBooking(b._id)}>
-                                          <Ban className="h-3 w-3 mr-1" />Từ chối
+                                          onClick={() => handleCancelBankingBooking(b._id)}
+                                          disabled={!!processingIds[b._id]}>
+                                          {processingIds[b._id] === 'cancel' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Ban className="h-3 w-3 mr-1" />}
+                                          {processingIds[b._id] === 'cancel' ? 'Đang xử lý...' : 'Từ chối'}
                                         </Button>
                                       </>
                                     )}
                                     {b.status === 'REFUND_PENDING' && (
                                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs h-7"
-                                        onClick={() => handleMarkRefunded(b._id)}>
-                                        <Banknote className="h-3 w-3 mr-1" />Đã hoàn tiền
+                                        onClick={() => handleMarkRefunded(b._id)}
+                                        disabled={!!processingIds[b._id]}>
+                                        {processingIds[b._id] === 'refund' ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Banknote className="h-3 w-3 mr-1" />}
+                                        {processingIds[b._id] === 'refund' ? 'Đang xử lý...' : 'Đã hoàn tiền'}
                                       </Button>
                                     )}
                                     {!['PENDING', 'REFUND_PENDING'].includes(b.status) && (

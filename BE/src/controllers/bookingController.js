@@ -437,7 +437,7 @@ export const confirmPayment = async (req, res) => {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
         fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] Attempting to send Confirmation to: ${userEmail}\n`);
-        sendEmail({
+        await sendEmail({
           email: userEmail,
           subject: '✅ MatchHub – Đặt sân thành công!',
           message: `
@@ -455,13 +455,9 @@ export const confirmPayment = async (req, res) => {
               <p>Cảm ơn bạn đã sử dụng MatchHub! 🎉</p>
             </div>
           `
-        }).then(() => {
-          fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] SUCCESS sending to: ${userEmail}\n`);
-        }).catch(err => {
-          fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] FAILED sending to: ${userEmail}. Error: ${err.message}\n`);
-          console.error('Email confirmation error:', err.message);
         });
-        console.log('📧 Confirmation email sending initialized to:', userEmail);
+        fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] SUCCESS sending to: ${userEmail}\n`);
+        console.log('📧 Confirmation email sent successfully to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
 
@@ -579,7 +575,7 @@ export const cancelBooking = async (req, res) => {
       if (userEmail) {
         let reason = req.user.role === 'owner' ? 'từ chối bởi chủ sân' : 'hủy bởi bạn';
 
-        sendEmail({
+        await sendEmail({
           email: userEmail,
           subject: '❌ MatchHub – Đặt sân bị hủy/từ chối',
           message: `
@@ -597,8 +593,8 @@ export const cancelBooking = async (req, res) => {
               <p>Cảm ơn bạn đã liên hệ MatchHub!</p>
             </div>
           `
-        }).catch(err => console.error('Email cancel error:', err.message));
-        console.log('📧 Cancel email sending initialized to:', userEmail);
+        });
+        console.log('📧 Cancel email sent successfully to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
 
@@ -666,7 +662,7 @@ export const markRefunded = async (req, res) => {
     try {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
-        sendEmail({
+        await sendEmail({
           email: userEmail,
           subject: '💸 MatchHub – Hoàn tiền thành công',
           message: `
@@ -682,8 +678,8 @@ export const markRefunded = async (req, res) => {
               <p>Cảm ơn bạn đã tin tưởng sử dụng MatchHub!</p>
             </div>
           `
-        }).catch(err => console.error('Email refund error:', err.message));
-        console.log('📧 Refund email sending initialized to:', userEmail);
+        });
+        console.log('📧 Refund email sent successfully to:', userEmail);
       }
     } catch (e) { console.error('Email error:', e.message); }
 

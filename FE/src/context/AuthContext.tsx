@@ -13,12 +13,14 @@ interface AuthContextType {
   login: (email: string, password: string, role?: 'user' | 'owner') => Promise<void>;
   register: (name: string, email: string, password: string, role: 'user' | 'owner', address?: string) => Promise<void>;
   logout: () => void;
+  loadingAuth: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user');
       }
     }
+    setLoadingAuth(false);
   }, []);
 
   const login = async (email: string, password: string, role?: 'user' | 'owner') => {
@@ -85,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loadingAuth }}>
       {children}
     </AuthContext.Provider>
   );
