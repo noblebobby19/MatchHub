@@ -540,6 +540,7 @@ export const cancelBooking = async (req, res) => {
       newStatus = 'cancelled';
     }
 
+    const oldStatus = booking.status;
     booking.status = newStatus;
     booking.cancelledAt = now;
     await booking.save();
@@ -554,10 +555,13 @@ export const cancelBooking = async (req, res) => {
         userNotifTitle = '💸 Đã hủy – Chờ hoàn tiền';
         userNotifMsg = `Đơn ${booking.bookingCode} đã hủy hợp lệ. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`;
         notifType = 'warning';
-      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && !isRefundable) {
+      } else if (req.user.role === 'owner') {
+        userNotifTitle = '❌ Chủ sân đã từ chối';
+        userNotifMsg = `Chủ sân đã từ chối đơn đặt sân ${booking.fieldName} của bạn lúc ${booking.time}.`;
+      } else if (booking.paymentMethod === 'banking' && (oldStatus === 'CONFIRMED' || oldStatus === 'confirmed') && !isRefundable) {
         // Hiện thông báo mất cọc khi hủy đơn trễ (quá 24h đặt hoặc cách trận đấu dưới 24h)
         userNotifTitle = '❌ Đã hủy đặt sân';
-        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy không hợp lệ (quá 24h từ lúc đặt hoặc cách giờ đá dưới 24h). Không được hoàn lại tiền cọc.`;
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy không hợp lệ (quá 24h từ lúc đặt hoặc cách giờ đá dưới 24h). KHÔNG được hoàn lại tiền cọc.`;
       }
 
       await Notification.create({
@@ -574,6 +578,15 @@ export const cancelBooking = async (req, res) => {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
         let reason = req.user.role === 'owner' ? 'từ chối bởi chủ sân' : 'hủy bởi bạn';
+        let additionalHtml = '';
+
+        if (isRefundable) {
+          additionalHtml = '<p style="color:#16a34a;font-weight:bold;padding:12px;background:#f0fdf4;border-left:4px solid #16a34a">✅ Đơn của bạn đủ điều kiện hoàn tiền cọc. Quá trình hoàn tiền đang được xử lý bởi chủ sân.</p>';
+        } else if (req.user.role !== 'owner' && booking.paymentMethod === 'banking' && (oldStatus === 'CONFIRMED' || oldStatus === 'confirmed') && !isRefundable) {
+          additionalHtml = '<p style="color:#b91c1c;font-weight:bold;padding:12px;background:#fef2f2;border-left:4px solid #b91c1c">⚠️ Lưu ý: Đơn hủy này KHÔNG đủ điều kiện hoàn lại tiền cọc do đã hủy trễ quy định (quá 24h từ lúc đặt sân hoặc cách giờ đá dưới 24h).</p>';
+        } else if (req.user.role === 'owner') {
+          additionalHtml = '<p style="color:#b91c1c;font-weight:bold;padding:12px;background:#fef2f2;border-left:4px solid #b91c1c">Lý do: Chủ sân không thể tiếp nhận, đã từ chối đơn đặt sân này.</p>';
+        }
 
         await sendEmail({
           email: userEmail,
@@ -589,7 +602,7 @@ export const cancelBooking = async (req, res) => {
                 <tr><td style="padding:8px;background:#fef2f2"><strong>Ngày:</strong></td><td style="padding:8px">${booking.date}</td></tr>
                 <tr><td style="padding:8px"><strong>Giờ:</strong></td><td style="padding:8px">${booking.time}</td></tr>
               </table>
-              ${isRefundable ? '<p style="color:#16a34a;font-weight:bold">✅ Đơn của bạn đủ điều kiện hoàn tiền cọc. Quá trình hoàn tiền đang được xử lý.</p>' : ''}
+              ${additionalHtml}
               <p>Cảm ơn bạn đã liên hệ MatchHub!</p>
             </div>
           `
