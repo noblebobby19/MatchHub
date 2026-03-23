@@ -526,10 +526,10 @@ export const cancelBooking = async (req, res) => {
         newStatus = 'REFUND_PENDING';
         isRefundable = true;
       } else if (['CONFIRMED', 'confirmed'].includes(booking.status)) {
-        // Đơn CK ĐÃ DUYỆT -> Hoàn cọc nếu thỏa 1 trong 2 ĐIỀU KIỆN:
-        // 1. Hủy sớm (trước giờ đá >= 24 tiếng)
-        // 2. Khách đổi ý nhanh (Hủy trong vòng <= 24 tiếng kể từ lúc vừa bấm nút đặt sân)
-        if (diffHoursToMatch >= 24 || createdDiffHours <= 24) {
+        // Đơn CK ĐÃ DUYỆT -> Chỉ hoàn cọc nếu thỏa VÀ ĐỒNG THỜI 2 ĐIỀU KIỆN:
+        // 1. Hủy trước giờ đá >= 24 tiếng
+        // 2. Hủy trong vòng <= 24 tiếng kể từ lúc vừa bấm nút đặt sân
+        if (diffHoursToMatch >= 24 && createdDiffHours <= 24) {
           newStatus = 'REFUND_PENDING';
           isRefundable = true;
         } else {
@@ -558,10 +558,10 @@ export const cancelBooking = async (req, res) => {
         userNotifTitle = '💸 Đã hủy – Chờ hoàn tiền';
         userNotifMsg = `Đơn ${booking.bookingCode} đã hủy hợp lệ. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`;
         notifType = 'warning';
-      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && diffHoursToMatch < 24) {
-        // Chỉ hiện thông báo mất cọc khi user hủy đơn ĐÃ CONFIRM trễ hạn
+      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && !isRefundable) {
+        // Hiện thông báo mất cọc khi hủy đơn trễ (quá 24h đặt hoặc cách trận đấu dưới 24h)
         userNotifTitle = '❌ Đã hủy đặt sân';
-        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trễ hạn (quá 24h kể từ sát giờ đá). Theo chính sách, bạn không được hoàn lại tiền cọc.`;
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy không hợp lệ (quá 24h từ lúc đặt hoặc cách giờ đá dưới 24h). Không được hoàn lại tiền cọc.`;
       }
 
       await Notification.create({
