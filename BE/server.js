@@ -15,6 +15,7 @@ import contactRoutes from './src/routes/contactRoutes.js';
 import bankConfigRoutes from './src/routes/bankConfigRoutes.js';
 import passport from './src/config/passport.js';
 import startExpireBookingsJob from './src/jobs/expireBookings.js';
+import startPingServerJob from './src/jobs/pingServer.js';
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ app.use('/uploads', (req, res, next) => {
 connectDB().then(() => {
   // Khởi động cron job sau khi kết nối DB thành công
   startExpireBookingsJob();
+  startPingServerJob();
 });
 
 // Routes
@@ -78,6 +80,11 @@ app.get('/', (req, res) => {
       bookings: '/api/bookings'
     }
   });
+});
+
+// Health check endpoint cho UptimeRobot / Ping Job
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is awake!', timestamp: new Date() });
 });
 
 app.use('/api/auth', authRoutes);

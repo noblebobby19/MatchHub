@@ -13,7 +13,7 @@ class ApiService {
     this.baseURL = API_BASE_URL;
   }
 
-  async request(endpoint: string, options: RequestOptions = {}): Promise<any> {
+  async request(endpoint: string, options: RequestOptions = {}, retries: number = 2): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
 
     // Add auth token if available
@@ -51,6 +51,13 @@ class ApiService {
 
       // Handle network errors
       if (!response.ok) {
+        // Nếu lỗi do Render sleep (thường trả về 502, 503, 504 hoặc 408 Timeout) và còn lượt retry
+        if ((response.status >= 500 || response.status === 408) && retries > 0) {
+          console.warn(`🔄 Server error (${response.status}), retrying in 2s... (${retries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return this.request(endpoint, options, retries - 1);
+        }
+
         // Check if response is JSON before parsing
         const contentType = response.headers.get('content-type');
         let errorData;
@@ -96,8 +103,13 @@ class ApiService {
 
       return data;
     } catch (error: any) {
-      // Handle network connection errors
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      // Logic Retry khi rớt mạng hoặc backend timeout không trả HTTP status
+      if ((error.name === 'TypeError' && error.message.includes('fetch')) || error.message?.includes('network')) {
+        if (retries > 0) {
+          console.warn(`🔄 Network error, retrying in 2s... (${retries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return this.request(endpoint, options, retries - 1);
+        }
         throw new Error('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng hoặc đảm bảo server đang chạy.');
       }
       throw error;
