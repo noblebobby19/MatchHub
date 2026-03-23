@@ -433,6 +433,7 @@ export const confirmPayment = async (req, res) => {
     } catch (e) { console.error('Notification error:', e.message); }
 
     // Gửi email cho user
+    let emailStatus = 'Sent';
     try {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
@@ -459,9 +460,12 @@ export const confirmPayment = async (req, res) => {
         fs.appendFileSync('email_debug.log', `[${new Date().toISOString()}] SUCCESS sending to: ${userEmail}\n`);
         console.log('📧 Confirmation email sent successfully to:', userEmail);
       }
-    } catch (e) { console.error('Email error:', e.message); }
+    } catch (e) { 
+      console.error('Email error:', e.message); 
+      emailStatus = `Lỗi mạng/Auth: ${e.message}`;
+    }
 
-    res.json({ message: 'Xác nhận thanh toán thành công', booking });
+    res.json({ message: 'Xác nhận thanh toán thành công', booking, emailStatus });
   } catch (error) {
     console.error('❌ Error confirming payment:', error);
     res.status(500).json({ message: error.message });
@@ -574,6 +578,7 @@ export const cancelBooking = async (req, res) => {
     } catch (e) { console.error('User Notification error:', e.message); }
 
     // Gửi email báo Hủy/Từ chối cho user
+    let emailStatus = 'Sent';
     try {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
@@ -609,7 +614,10 @@ export const cancelBooking = async (req, res) => {
         });
         console.log('📧 Cancel email sent successfully to:', userEmail);
       }
-    } catch (e) { console.error('Email error:', e.message); }
+    } catch (e) { 
+      console.error('Email error:', e.message); 
+      emailStatus = `Lỗi gửi mail: ${e.message}`;
+    }
 
     // Notification cho Chủ Sân (Owner)
     try {
@@ -634,7 +642,8 @@ export const cancelBooking = async (req, res) => {
       message: `Hủy đơn thành công.`,
       status: newStatus,
       isRefundable,
-      booking
+      booking,
+      emailStatus
     });
   } catch (error) {
     console.error('❌ Error cancelling booking:', error);
@@ -672,6 +681,7 @@ export const markRefunded = async (req, res) => {
     } catch (e) { console.error('Notification error:', e.message); }
 
     // Gửi email hoàn tiền
+    let emailStatus = 'Sent';
     try {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
@@ -694,9 +704,12 @@ export const markRefunded = async (req, res) => {
         });
         console.log('📧 Refund email sent successfully to:', userEmail);
       }
-    } catch (e) { console.error('Email error:', e.message); }
+    } catch (e) { 
+      console.error('Email error:', e.message); 
+      emailStatus = `Lỗi gửi mail: ${e.message}`;
+    }
 
-    res.json({ message: 'Đã đánh dấu hoàn tiền thành công', booking });
+    res.json({ message: 'Đã đánh dấu hoàn tiền thành công', booking, emailStatus });
   } catch (error) {
     console.error('❌ Error marking refunded:', error);
     res.status(500).json({ message: error.message });

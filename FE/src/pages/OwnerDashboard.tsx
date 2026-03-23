@@ -566,8 +566,12 @@ export function OwnerDashboard() {
         const handleConfirmPayment = async (id: string) => {
           setProcessingIds(prev => ({ ...prev, [id]: 'confirm' }));
           try {
-            await apiService.confirmPayment(id);
-            toast.success('Đã xác nhận thanh toán! Email xác nhận đã gửi cho khách.');
+            const res = await apiService.confirmPayment(id);
+            if (res.emailStatus && res.emailStatus.includes('Lỗi')) {
+              toast.warning(`Xác nhận thành công nhưng ${res.emailStatus}`);
+            } else {
+              toast.success('Đã xác nhận thanh toán! Email xác nhận đã gửi cho khách.');
+            }
             const updated = await apiService.getBookings();
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
@@ -581,8 +585,12 @@ export function OwnerDashboard() {
           if (!window.confirm('Bạn có chắc chắn muốn từ chối đơn đặt sân này không?')) return;
           setProcessingIds(prev => ({ ...prev, [id]: 'cancel' }));
           try {
-            await apiService.cancelBooking(id);
-            toast.success('Đã từ chối đơn đặt sân thành công.');
+            const res = await apiService.cancelBooking(id);
+            if (res.emailStatus && res.emailStatus.includes('Lỗi')) {
+              toast.warning(`Từ chối thành công nhưng ${res.emailStatus}`);
+            } else {
+              toast.success('Đã từ chối đơn đặt sân thành công.');
+            }
             const updated = await apiService.getBookings();
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
@@ -595,8 +603,12 @@ export function OwnerDashboard() {
         const handleMarkRefunded = async (id: string) => {
           setProcessingIds(prev => ({ ...prev, [id]: 'refund' }));
           try {
-            await apiService.markRefunded(id);
-            toast.success('Đã đánh dấu hoàn tiền! Email thông báo đã gửi cho khách.');
+            const res = await apiService.markRefunded(id);
+            if (res.emailStatus && res.emailStatus.includes('Lỗi')) {
+              toast.warning(`Đánh dấu hoàn tiền thành công nhưng ${res.emailStatus}`);
+            } else {
+              toast.success('Đã đánh dấu hoàn tiền! Email thông báo đã gửi cho khách.');
+            }
             const updated = await apiService.getBookings();
             setBookings(Array.isArray(updated) ? updated : []);
           } catch (err: any) {
