@@ -499,25 +499,37 @@ export const cancelBooking = async (req, res) => {
       return res.status(403).json({ message: 'Đơn đặt sân thanh toán tiền mặt không thể hủy. Vui lòng liên hệ chủ sân.' });
     }
 
-    // Kiểm tra 24h: booking.date + booking.time so với hiện tại
+    // [KẾT HỢP 2 ĐIỀU KIỆN HOÀN TIỀN]
+    // 1. Số giờ KỂ TỪ LÚC ĐẶT SÂN:
+    const createdAtMs = new Date(booking.createdAt).getTime();
+    const now = new Date();
+    const createdDiffHours = (now.getTime() - createdAtMs) / (1000 * 60 * 60);
+
+    // 2. Số giờ CÒN LẠI CHO ĐẾN GIỜ ĐÁ:
     const [year, month, day] = booking.date.split('-').map(Number);
     const [startHour] = booking.time.split(':').map(Number);
     const bookingDateTime = new Date(year, month - 1, day, startHour, 0, 0);
-    const now = new Date();
-    const diffMs = bookingDateTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffMsToMatch = bookingDateTime.getTime() - now.getTime();
+    const diffHoursToMatch = diffMsToMatch / (1000 * 60 * 60);
+
+    // Không cho phép user hủy trận đấu đã diễn ra
+    if (diffHoursToMatch <= 0 && req.user.role !== 'owner') {
+      return res.status(400).json({ message: 'Không thể hủy trận đấu đã đến giờ hoặc đã kết thúc' });
+    }
 
     let newStatus;
     let isRefundable = false;
 
     if (booking.paymentMethod === 'banking') {
       if (['PENDING', 'pending'].includes(booking.status)) {
-        // Đơn CK chưa được duyệt (Khách vừa đặt xong đổi ý luôn) -> Chắc chắn được hoàn cọc
+        // Đơn CK chưa được duyệt -> Chắc chắn được hoàn cọc
         newStatus = 'REFUND_PENDING';
         isRefundable = true;
       } else if (['CONFIRMED', 'confirmed'].includes(booking.status)) {
-        // Đơn CK ĐÃ DUYỆT -> Bắt buộc phải hủy trước 24h thì mới được hoàn cọc
-        if (diffHours >= 24) {
+        // Đơn CK ĐÃ DUYỆT -> Hoàn cọc nếu thỏa 1 trong 2 ĐIỀU KIỆN:
+        // 1. Hủy sớm (trước giờ đá >= 24 tiếng)
+        // 2. Khách đổi ý nhanh (Hủy trong vòng <= 24 tiếng kể từ lúc vừa bấm nút đặt sân)
+        if (diffHoursToMatch >= 24 || createdDiffHours <= 24) {
           newStatus = 'REFUND_PENDING';
           isRefundable = true;
         } else {
@@ -544,12 +556,12 @@ export const cancelBooking = async (req, res) => {
 
       if (isRefundable) {
         userNotifTitle = '💸 Đã hủy – Chờ hoàn tiền';
-        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trước 24h. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`;
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy hợp lệ. Bạn sẽ nhận lại ${booking.depositAmount?.toLocaleString('vi-VN')}đ tiền cọc.`;
         notifType = 'warning';
-      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && diffHours < 24) {
+      } else if (booking.paymentMethod === 'banking' && (booking.status === 'CONFIRMED' || booking.status === 'confirmed') && diffHoursToMatch < 24) {
         // Chỉ hiện thông báo mất cọc khi user hủy đơn ĐÃ CONFIRM trễ hạn
         userNotifTitle = '❌ Đã hủy đặt sân';
-        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trễ hạn. Theo chính sách, bạn không được hoàn lại tiền cọc.`;
+        userNotifMsg = `Đơn ${booking.bookingCode} đã hủy trễ hạn (quá 24h kể từ sát giờ đá). Theo chính sách, bạn không được hoàn lại tiền cọc.`;
       }
 
       await Notification.create({
@@ -566,7 +578,7 @@ export const cancelBooking = async (req, res) => {
       const userEmail = booking.customerEmail || booking.userId?.email;
       if (userEmail) {
         let reason = req.user.role === 'owner' ? 'từ chối bởi chủ sân' : 'hủy bởi bạn';
-        
+
         sendEmail({
           email: userEmail,
           subject: '❌ MatchHub – Đặt sân bị hủy/từ chối',
