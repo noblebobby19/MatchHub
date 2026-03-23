@@ -191,7 +191,7 @@ export function OwnerDashboard() {
 
     // Khách hàng mới trong tháng
     const currentMonthCustomers = new Set(
-      currentMonthBookings.map(b => b.userId._id || b.userId.email)
+      currentMonthBookings.map(b => b.userId?._id || b.userId?.email || b.customer || 'unknown')
     ).size;
 
     return {
